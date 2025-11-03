@@ -1,0 +1,11 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "toallcreation-backend"
+resolve_s3 = true
+s3_prefix = "toallcreation-backend"
+region = "us-west-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+image_repositories = []
