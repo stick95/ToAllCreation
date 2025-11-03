@@ -1,384 +1,376 @@
 # ToAllCreation
 
-**Gospel-Focused Social Media Aggregator**
+*"Go into all the world and preach the gospel to all creation." - Mark 16:15*
 
-> *"Go into all the world and preach the gospel to all creation." - Mark 16:15*
-
----
-
-## Overview
-
-ToAllCreation is a serverless social media management platform designed to help spread the gospel message efficiently across multiple social media platforms. Built on AWS with a focus on cost-efficiency and scalability.
-
-### Mission
-
-Provide a free, accessible platform for gospel content creators to reach audiences across Facebook, Instagram, YouTube, and other social networks simultaneously.
-
-### Key Features
-
-- **Multi-Platform Posting:** Share content to Facebook, Instagram, and YouTube simultaneously
-- **Media Support:** Upload and share images, videos, and short-form content (Reels, Shorts)
-- **Comment Aggregation (Phase 2):** View and respond to comments from all platforms in one place
-- **Cost-Effective:** Built to operate within AWS Free Tier ($2-3/month)
-- **Serverless Architecture:** Auto-scaling, zero server management
+A serverless social media aggregator platform that enables gospel content creators to efficiently share their message across multiple platforms simultaneously.
 
 ---
 
-## Quick Start
+## 🚀 Current Status: Hello World Deployed
 
-### Prerequisites
+**Live URLs:**
+- **Frontend (HTTPS):** https://d1p7fiwu5m4weh.cloudfront.net
+- **Frontend (S3):** http://toallcreation-frontend-271297706586.s3-website-us-west-2.amazonaws.com
+- **Backend API:** https://50gms3b8y2.execute-api.us-west-2.amazonaws.com
 
-- AWS Account (Free Tier)
-- Node.js 20+
-- Python 3.12+
-- AWS CLI
-- AWS SAM CLI
-- Git
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/toallcreation.git
-cd toallcreation
-
-# Install backend dependencies
-cd backend
-pip install -r requirements.txt
-
-# Install frontend dependencies
-cd ../frontend
-npm install
-
-# Deploy infrastructure
-cd ../backend
-sam build
-sam deploy --guided
-
-# Deploy frontend
-cd ../frontend
-npm run build
-aws s3 sync dist/ s3://toallcreation-frontend
-```
-
-### Configuration
-
-1. Create AWS account and configure credentials
-2. Set up social media developer accounts:
-   - Facebook Developer Account → Create App
-   - Google Cloud Console → Enable YouTube Data API
-   - Instagram Business Account → Link to Facebook Page
-3. Configure environment variables (see `.env.example`)
-4. Deploy using SAM CLI
+**What's Working:**
+- ✅ Full-stack Hello World application
+- ✅ FastAPI backend on AWS Lambda (Python 3.12, ARM64)
+- ✅ React + Vite + TypeScript frontend
+- ✅ CloudFront CDN with HTTPS
+- ✅ CI/CD workflows (GitHub Actions)
+- ✅ All within AWS Free Tier ($0/month)
 
 ---
 
-## Architecture
+## 📦 Quick Start
 
-### High-Level Components
+### Test the Live Application
+Visit: https://d1p7fiwu5m4weh.cloudfront.net
 
-```
-┌─────────────┐
-│   USER      │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────────────────┐
-│  CloudFront CDN                             │
-│  ┌─────────────┐    ┌──────────────────┐   │
-│  │  React SPA  │    │   API Gateway    │   │
-│  │  (S3)       │    │   (HTTP API)     │   │
-│  └─────────────┘    └─────────┬────────┘   │
-└────────────────────────────────┼────────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-              ┌─────▼──────┐         ┌───────▼────────┐
-              │  Cognito   │         │  Lambda        │
-              │  (Auth)    │         │  (FastAPI)     │
-              └────────────┘         └────────┬───────┘
-                                              │
-                    ┌─────────────────────────┼──────────────┐
-                    │                         │              │
-              ┌─────▼──────┐         ┌────────▼─────┐  ┌────▼────┐
-              │  DynamoDB  │         │     SQS      │  │   S3    │
-              │  (Data)    │         │  (Queue)     │  │ (Media) │
-              └────────────┘         └──────┬───────┘  └─────────┘
-                                            │
-                                            ▼
-                                    ┌───────────────┐
-                                    │ Social Media  │
-                                    │  Platforms    │
-                                    │ • Facebook    │
-                                    │ • Instagram   │
-                                    │ • YouTube     │
-                                    └───────────────┘
-```
-
-### Technology Stack
-
-**Backend:**
-- FastAPI (Python 3.12)
-- AWS Lambda (ARM64)
-- API Gateway (HTTP API)
-- DynamoDB (Single-Table Design)
-- SQS (Job Queue)
-- Secrets Manager (API Tokens)
-
-**Frontend:**
-- React 18
-- Vite (Build Tool)
-- Zustand (State Management)
-- Shadcn/ui (Components)
-- TailwindCSS
-
-**Infrastructure:**
-- AWS SAM (Infrastructure as Code)
-- GitHub Actions (CI/CD)
-- CloudFront (CDN)
-- Cognito (Authentication)
-
-**Social Media APIs:**
-- Facebook Graph API
-- Instagram Graph API
-- YouTube Data API v3
-- LinkedIn API (future)
-- TikTok Content API (future)
-
----
-
-## Project Structure
-
-```
-toallcreation/
-├── backend/                    # Python backend
-│   ├── app/
-│   │   ├── api/               # API routes
-│   │   ├── core/              # Core business logic
-│   │   ├── models/            # Pydantic models
-│   │   ├── services/          # External integrations
-│   │   └── workers/           # Background workers
-│   ├── tests/                 # Backend tests
-│   ├── template.yaml          # SAM template
-│   └── requirements.txt
-│
-├── frontend/                   # React frontend
-│   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── pages/             # Page components
-│   │   ├── store/             # Zustand stores
-│   │   ├── api/               # API client
-│   │   └── hooks/             # Custom hooks
-│   ├── public/
-│   └── package.json
-│
-├── .github/
-│   └── workflows/             # GitHub Actions
-│       └── deploy.yml
-│
-├── docs/                      # Documentation
-│   ├── API.md                # API documentation
-│   ├── DEPLOYMENT.md         # Deployment guide
-│   └── DEVELOPMENT.md        # Development guide
-│
-├── ARCHITECTURE.md           # Comprehensive architecture
-├── README.md                 # This file
-└── LICENSE
-```
-
----
-
-## Features
-
-### MVP (Phase 1)
-
-- [x] User authentication (AWS Cognito)
-- [x] Connect social media accounts (OAuth)
-- [x] Post text content to multiple platforms
-- [x] Upload and share images
-- [x] Upload and share videos
-- [x] Platform-specific content (Reels, Shorts)
-- [x] Post status tracking
-- [x] Error handling and retry logic
-
-### Phase 2 (In Progress)
-
-- [ ] Aggregate comments from all platforms
-- [ ] Reply to comments within app
-- [ ] Real-time comment notifications
-- [ ] Comment filtering and search
-
-### Future Enhancements
-
-- [ ] Scheduled posting
-- [ ] Analytics dashboard
-- [ ] Content calendar
-- [ ] Multi-user support
-- [ ] Donation system integration
-- [ ] iOS/Android mobile apps (Flutter)
-- [ ] AI-powered content suggestions
-- [ ] Hashtag recommendations
-
----
-
-## Deployment
-
-### AWS Free Tier Costs
-
-**First 12 Months:**
-- Lambda: FREE (1M requests/month)
-- API Gateway: FREE (1M requests/month)
-- DynamoDB: FREE (25 GB, 25 RCU/WCU)
-- S3: FREE (5 GB storage)
-- CloudFront: FREE (1 TB transfer, 10M requests)
-- Cognito: FREE (50K MAU)
-- **Estimated Cost:** ~$2-3/month (Secrets Manager only)
-
-**After 12 Months:**
-- Most services remain in permanent free tier
-- **Estimated Cost:** ~$2.60/month
-
-### Deployment Steps
-
-```bash
-# 1. Configure AWS credentials
-aws configure
-
-# 2. Deploy backend
-cd backend
-sam build --use-container
-sam deploy --guided
-
-# 3. Deploy frontend
-cd ../frontend
-npm run build
-aws s3 sync dist/ s3://toallcreation-frontend --delete
-aws cloudfront create-invalidation --distribution-id XXXXX --paths "/*"
-```
-
----
-
-## Development
+Click **"Test Backend API"** to verify end-to-end connectivity!
 
 ### Local Development
 
+**Backend:**
 ```bash
-# Backend
 cd backend
-pip install -r requirements-dev.txt
-sam local start-api
+sam build
+sam local start-api --port 3000
+```
 
-# Frontend
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+# Visit http://localhost:5173
+```
+
+---
+
+## 🏗️ Project Structure
+
+```
+ToAllCreation/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI application
+│   │   └── requirements.txt     # Python dependencies
+│   ├── template.yaml            # AWS SAM template
+│   └── samconfig.toml           # SAM deployment config
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx              # Main React component
+│   │   └── ...
+│   ├── package.json
+│   └── vite.config.ts
+├── .github/workflows/
+│   ├── backend-deploy.yml       # Backend CI/CD
+│   └── frontend-deploy.yml      # Frontend CI/CD
+├── docs/                        # Full project documentation
+│   ├── ARCHITECTURE.md          # Complete architecture (104 KB)
+│   ├── IMPLEMENTATION_CHECKLIST.md  # Week-by-week plan
+│   ├── QUICK_START.md           # 30-minute setup guide
+│   └── ...
+├── DEPLOYMENT.md                # Deployment guide
+├── DEPLOYMENT-COMPLETE.md       # Live deployment info
+├── CLOUDFRONT-INFO.md           # CloudFront CDN details
+└── AWS-DEPLOYMENT-INFO.md       # AWS resources info
+```
+
+---
+
+## 🎯 API Endpoints
+
+All endpoints are CORS-enabled:
+
+- **`GET /`** - Root endpoint
+  ```json
+  {
+    "message": "ToAllCreation API - Hello World!",
+    "version": "0.1.0",
+    "status": "operational"
+  }
+  ```
+
+- **`GET /health`** - Health check
+  ```json
+  {
+    "status": "healthy"
+  }
+  ```
+
+- **`GET /api/hello`** - Test endpoint
+  ```json
+  {
+    "message": "Hello from the backend!",
+    "timestamp": "2025-11-03",
+    "service": "ToAllCreation Backend API"
+  }
+  ```
+
+---
+
+## 🔧 Tech Stack
+
+### Frontend
+- **Framework:** React 18 with TypeScript
+- **Build Tool:** Vite (fast builds, HMR)
+- **State Management:** Zustand (planned)
+- **UI Components:** Shadcn/ui + Tailwind CSS (planned)
+- **Hosting:** S3 + CloudFront CDN
+
+### Backend
+- **Framework:** FastAPI (Python 3.12)
+- **Runtime:** AWS Lambda (ARM64 Graviton2)
+- **API Gateway:** HTTP API
+- **Deployment:** AWS SAM
+
+### Infrastructure
+- **CDN:** CloudFront (HTTPS, global edge locations)
+- **Storage:** S3 (static website hosting)
+- **CI/CD:** GitHub Actions
+- **Region:** us-west-2 (Oregon)
+
+### Planned (Full MVP)
+- **Database:** DynamoDB (single-table design)
+- **Auth:** AWS Cognito
+- **Media Storage:** S3
+- **Queue:** SQS (async posting)
+- **Scheduling:** EventBridge
+- **Social APIs:** Facebook, YouTube, Instagram
+
+---
+
+## 💰 Cost Analysis
+
+**Current (Hello World):**
+- Lambda: $0 (1M requests/month free)
+- API Gateway: $0 (1M requests/month free for 12 months)
+- S3: $0 (5GB storage free for 12 months)
+- CloudFront: $0 (1TB transfer/month free)
+- **Total: $0/month** ✅
+
+**Full MVP Estimate:**
+- First 12 months: ~$2-3/month
+- After 12 months: ~$2.60/month
+- Optimized: ~$0.60/month (with SSM instead of Secrets Manager)
+
+---
+
+## 🚀 Deployment
+
+### Deploy Backend
+```bash
+cd backend
+sam build --use-container
+sam deploy
+```
+
+### Deploy Frontend
+```bash
+cd frontend
+npm run build
+aws s3 sync dist/ s3://toallcreation-frontend-271297706586/ --delete
+aws cloudfront create-invalidation --distribution-id E2JDMDOIC3T6K6 --paths "/*"
+```
+
+### CI/CD (Automatic)
+Push to `main` branch triggers automatic deployment via GitHub Actions.
+
+**Required GitHub Secrets:**
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `VITE_API_URL`
+- `S3_BUCKET`
+- `CLOUDFRONT_DISTRIBUTION_ID`
+
+---
+
+## 📚 Documentation
+
+### Quick Reference
+- **[DEPLOYMENT-COMPLETE.md](./DEPLOYMENT-COMPLETE.md)** - Current deployment status
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Step-by-step deployment guide
+- **[CLOUDFRONT-INFO.md](./CLOUDFRONT-INFO.md)** - CDN configuration & cache busting
+- **[AWS-DEPLOYMENT-INFO.md](./AWS-DEPLOYMENT-INFO.md)** - AWS resources details
+
+### Full Project Documentation
+- **[docs/INDEX.md](./docs/INDEX.md)** - Documentation navigation
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Complete technical architecture
+- **[docs/IMPLEMENTATION_CHECKLIST.md](./docs/IMPLEMENTATION_CHECKLIST.md)** - Week-by-week implementation plan
+- **[docs/QUICK_START.md](./docs/QUICK_START.md)** - 30-minute setup guide
+- **[docs/TECHNICAL_DECISIONS.md](./docs/TECHNICAL_DECISIONS.md)** - Key decisions to make
+
+---
+
+## 🎯 Roadmap
+
+### ✅ Phase 0: Hello World (Complete)
+- [x] Backend API with FastAPI + Lambda
+- [x] Frontend with React + Vite
+- [x] S3 static hosting
+- [x] CloudFront CDN with HTTPS
+- [x] CI/CD pipelines
+- [x] Full AWS deployment
+
+### 📋 Phase 1: MVP (Weeks 1-8)
+**Goal:** Single-user posting to multiple platforms
+
+**Week 1-2:** Foundation & Infrastructure
+- [ ] DynamoDB table setup
+- [ ] Cognito authentication
+- [ ] Basic frontend layout
+
+**Week 3-4:** Authentication & Core API
+- [ ] User login/logout
+- [ ] Platform OAuth integration (Facebook, YouTube)
+- [ ] Credentials management
+
+**Week 5-6:** Post Management
+- [ ] Post creation UI
+- [ ] Media upload (S3 pre-signed URLs)
+- [ ] SQS async posting
+- [ ] Status tracking
+
+**Week 7-8:** Polish & Launch
+- [ ] Error handling
+- [ ] Responsive design
+- [ ] Production deployment
+- [ ] User testing
+
+### 📋 Phase 2: Comment Aggregation (Weeks 9-12)
+- [ ] Comment polling (EventBridge)
+- [ ] Comment dashboard
+- [ ] Reply functionality
+- [ ] Email notifications
+
+### 🔮 Phase 3: Future Enhancements
+- [ ] Scheduled posting
+- [ ] Analytics dashboard
+- [ ] Multi-user support
+- [ ] Mobile apps (Flutter)
+- [ ] LinkedIn & TikTok support
+- [ ] AI content suggestions
+
+---
+
+## 🧪 Testing
+
+### Test Backend Locally
+```bash
+cd backend
+sam build
+sam local start-api --port 3000
+curl http://localhost:3000/health
+```
+
+### Test Frontend Locally
+```bash
 cd frontend
 npm run dev
+# Visit http://localhost:5173
 ```
 
-### Testing
-
+### Test Deployed API
 ```bash
-# Backend tests
-cd backend
-pytest tests/ --cov=app
-
-# Frontend tests
-cd frontend
-npm test
+curl https://50gms3b8y2.execute-api.us-west-2.amazonaws.com/health
 ```
 
-### Environment Variables
+### Test Deployed Frontend
+Visit: https://d1p7fiwu5m4weh.cloudfront.net
 
-Create `.env` files:
+---
 
-**Backend (.env):**
-```
-AWS_REGION=us-east-1
-TABLE_NAME=ToAllCreation
-BUCKET_NAME=toallcreation-media
-QUEUE_URL=https://sqs.us-east-1.amazonaws.com/...
-```
+## 🔐 Environment Variables
 
-**Frontend (.env.local):**
-```
-VITE_API_URL=https://api.toallcreation.com
-VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxx
-VITE_COGNITO_CLIENT_ID=xxxxx
+### Backend
+Set in `backend/template.yaml` or Lambda console:
+- (None required for Hello World)
+
+### Frontend
+Create `frontend/.env.local`:
+```env
+# For AWS deployment
+VITE_API_URL=https://50gms3b8y2.execute-api.us-west-2.amazonaws.com
+
+# For local backend testing
+# VITE_API_URL=http://localhost:3000
 ```
 
 ---
 
-## API Documentation
+## 🤝 Contributing
 
-See [API.md](docs/API.md) for full API documentation.
+This is currently a single-developer project. Contributions welcome after MVP launch.
 
-### Key Endpoints
+### Development Workflow
+1. Create feature branch from `dev`
+2. Make changes
+3. Test locally
+4. Merge to `dev`
+5. Test on `dev` branch
+6. Merge to `main` for production deployment
 
+---
+
+## 📊 Monitoring
+
+### CloudWatch Logs
+```bash
+sam logs -n ApiFunction --stack-name toallcreation-backend --tail
 ```
-POST   /api/v1/auth/login
-GET    /api/v1/platforms
-POST   /api/v1/platforms/{platform}/connect
-GET    /api/v1/posts
-POST   /api/v1/posts
-POST   /api/v1/posts/{id}/publish
-GET    /api/v1/comments
-POST   /api/v1/comments/{id}/reply
+
+### CloudFront Metrics
+```bash
+aws cloudfront get-distribution --id E2JDMDOIC3T6K6 --query 'Distribution.Status'
+```
+
+### AWS Console
+- **Lambda:** https://us-west-2.console.aws.amazon.com/lambda
+- **API Gateway:** https://us-west-2.console.aws.amazon.com/apigateway
+- **CloudFront:** https://console.aws.amazon.com/cloudfront
+- **S3:** https://s3.console.aws.amazon.com/s3/buckets/toallcreation-frontend-271297706586
+
+---
+
+## 🗑️ Cleanup
+
+### Delete All AWS Resources
+```bash
+# Delete CloudFront (must disable first, takes 15 min)
+aws cloudfront get-distribution-config --id E2JDMDOIC3T6K6 > /tmp/cf.json
+# Edit: Set "Enabled": false, then update and delete
+
+# Delete backend stack
+aws cloudformation delete-stack --stack-name toallcreation-backend --region us-west-2
+
+# Delete S3 bucket
+aws s3 rm s3://toallcreation-frontend-271297706586/ --recursive
+aws s3 rb s3://toallcreation-frontend-271297706586
 ```
 
 ---
 
-## Contributing
+## 📝 License
 
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Write tests for new features
-- Follow PEP 8 (Python) and ESLint (TypeScript)
-- Update documentation
-- Ensure CI/CD passes
+Private project - All rights reserved
 
 ---
 
-## Security
+## 🙏 Mission
 
-- All secrets stored in AWS Secrets Manager (encrypted)
-- HTTPS enforced (CloudFront + API Gateway)
-- JWT authentication via Cognito
-- Input validation with Pydantic
-- IAM roles follow least-privilege principle
+This platform exists to empower gospel content creators to efficiently spread the message of Jesus Christ across multiple social media platforms, maximizing reach and minimizing effort.
 
-**Report security vulnerabilities:** security@toallcreation.com
+*"Therefore go and make disciples of all nations..." - Matthew 28:19*
 
 ---
 
-## License
+## 📞 Contact
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Support
-
-For questions or support:
-
-- Documentation: [docs/](docs/)
-- Issues: [GitHub Issues](https://github.com/yourusername/toallcreation/issues)
-- Email: support@toallcreation.com
+For questions or feedback, please open an issue in the GitHub repository.
 
 ---
 
-## Acknowledgments
-
-- Built with AWS Free Tier
-- Powered by FastAPI and React
-- Social media integrations via platform APIs
-- Inspired by the Great Commission (Mark 16:15)
-
----
-
-**Spread the Gospel. Reach All Creation.**
+**Status:** ✅ Hello World Complete | 🚧 MVP In Planning
