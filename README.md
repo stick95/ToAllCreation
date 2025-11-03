@@ -191,10 +191,11 @@ Push to `main` branch triggers automatic deployment via GitHub Actions.
 ## 📚 Documentation
 
 ### Quick Reference
-- **[DEPLOYMENT-COMPLETE.md](./DEPLOYMENT-COMPLETE.md)** - Current deployment status
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Step-by-step deployment guide
-- **[CLOUDFRONT-INFO.md](./CLOUDFRONT-INFO.md)** - CDN configuration & cache busting
-- **[AWS-DEPLOYMENT-INFO.md](./AWS-DEPLOYMENT-INFO.md)** - AWS resources details
+- **[docs/DEPLOYMENT-COMPLETE.md](./docs/DEPLOYMENT-COMPLETE.md)** - Current deployment status
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Step-by-step deployment guide
+- **[docs/CLOUDFRONT-INFO.md](./docs/CLOUDFRONT-INFO.md)** - CDN configuration & cache busting
+- **[docs/AWS-DEPLOYMENT-INFO.md](./docs/AWS-DEPLOYMENT-INFO.md)** - AWS resources details
+- **[docs/HELLO-WORLD-SUMMARY.md](./docs/HELLO-WORLD-SUMMARY.md)** - Implementation summary
 
 ### Full Project Documentation
 - **[docs/INDEX.md](./docs/INDEX.md)** - Documentation navigation
