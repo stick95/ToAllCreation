@@ -33,7 +33,7 @@ jobs:
       - name: Build with SAM
         run: |
           cd backend
-          sam build --use-container
+          sam build
 
       - name: Deploy with SAM
         run: |

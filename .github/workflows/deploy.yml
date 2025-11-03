@@ -1,0 +1,126 @@
+name: Deploy Full Stack
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up environments
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Set up AWS SAM
+        uses: aws-actions/setup-sam@v2
+
+      # Build Backend
+      - name: Build Backend
+        run: |
+          cd backend
+          sam build
+
+      # Deploy Backend (fail fast if this fails)
+      - name: Deploy Backend
+        id: deploy-backend
+        run: |
+          cd backend
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+          echo "Backend deployed successfully"
+
+      # Build Frontend (only if backend succeeds)
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build Frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          cd frontend
+          npm run build
+
+      # Backup current frontend (for rollback)
+      - name: Backup Current Frontend
+        id: backup-frontend
+        run: |
+          TIMESTAMP=$(date +%s)
+          echo "backup_key=backup-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          aws s3 sync s3://${{ secrets.S3_BUCKET }}/ s3://${{ secrets.S3_BUCKET }}-backup-${TIMESTAMP}/ || echo "No existing frontend to backup"
+        continue-on-error: true
+
+      # Deploy Frontend
+      - name: Deploy Frontend to S3
+        id: deploy-frontend
+        run: |
+          cd frontend
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }}/ --delete
+
+      # Invalidate CloudFront Cache (only if frontend deploy succeeds)
+      - name: Invalidate CloudFront Cache
+        if: steps.deploy-frontend.outcome == 'success'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      # Test deployment
+      - name: Smoke Test
+        run: |
+          echo "Waiting 10 seconds for deployment to propagate..."
+          sleep 10
+
+          # Test backend
+          BACKEND_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.VITE_API_URL }}/health)
+          if [ "$BACKEND_HEALTH" != "200" ]; then
+            echo "Backend health check failed with status $BACKEND_HEALTH"
+            exit 1
+          fi
+          echo "✅ Backend health check passed"
+
+          # Test frontend (via CloudFront)
+          FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://d1p7fiwu5m4weh.cloudfront.net)
+          if [ "$FRONTEND_STATUS" != "200" ]; then
+            echo "Frontend check failed with status $FRONTEND_STATUS"
+            exit 1
+          fi
+          echo "✅ Frontend check passed"
+
+          echo "🎉 Deployment successful!"
+
+      # Rollback on failure
+      - name: Rollback on Failure
+        if: failure() && steps.deploy-frontend.outcome == 'success'
+        run: |
+          echo "⚠️ Deployment failed, rolling back frontend..."
+          if [ -n "${{ steps.backup-frontend.outputs.backup_key }}" ]; then
+            aws s3 sync s3://${{ secrets.S3_BUCKET }}-${{ steps.backup-frontend.outputs.backup_key }}/ s3://${{ secrets.S3_BUCKET }}/ --delete
+            aws cloudfront create-invalidation \
+              --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+              --paths "/*"
+            echo "✅ Frontend rolled back to previous version"
+          fi
+
+          # Note: Backend rollback requires manual intervention or CloudFormation stack rollback
+          echo "⚠️ Backend may need manual rollback via AWS Console or 'sam deploy' with previous version"
+          exit 1

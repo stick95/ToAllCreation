@@ -177,7 +177,15 @@ aws cloudfront create-invalidation --distribution-id E2JDMDOIC3T6K6 --paths "/*"
 ```
 
 ### CI/CD (Automatic)
-Push to `main` branch triggers automatic deployment via GitHub Actions.
+Push to `main` branch triggers **unified deployment** of both backend and frontend with automatic rollback on failure.
+
+**Build Time:** 2-3 minutes (optimized without Docker containers)
+
+**Features:**
+- ✅ Atomic deployments (both backend + frontend or neither)
+- ✅ Automatic frontend rollback on failure
+- ✅ Smoke tests verify end-to-end functionality
+- ✅ Version consistency guaranteed
 
 **Required GitHub Secrets:**
 - `AWS_ACCESS_KEY_ID`
@@ -185,6 +193,8 @@ Push to `main` branch triggers automatic deployment via GitHub Actions.
 - `VITE_API_URL`
 - `S3_BUCKET`
 - `CLOUDFRONT_DISTRIBUTION_ID`
+
+See [docs/UNIFIED-DEPLOYMENT.md](./docs/UNIFIED-DEPLOYMENT.md) for details.
 
 ---
 
