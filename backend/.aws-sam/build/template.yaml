@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ToAllCreation Backend - Hello World
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.12
+    Architectures:
+    - arm64
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ApiFunction
+      Handler: main.handler
+      Events:
+        RootPath:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: GET
+            ApiId:
+              Ref: HttpApi
+        HealthPath:
+          Type: HttpApi
+          Properties:
+            Path: /health
+            Method: GET
+            ApiId:
+              Ref: HttpApi
+        HelloPath:
+          Type: HttpApi
+          Properties:
+            Path: /api/hello
+            Method: GET
+            ApiId:
+              Ref: HttpApi
+        CatchAll:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId:
+              Ref: HttpApi
+    Metadata:
+      SamResourceId: ApiFunction
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+        - '*'
+        AllowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        AllowHeaders:
+        - '*'
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+  ApiFunction:
+    Description: Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - ApiFunction
+      - Arn
