@@ -11,11 +11,63 @@ Globals:
       - arm64
 
 Resources:
+  # Cognito User Pool
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: toallcreation-users
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      EmailVerificationMessage: "Your ToAllCreation verification code is {####}"
+      EmailVerificationSubject: "Verify your ToAllCreation account"
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  # Cognito User Pool Client
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: toallcreation-web-client
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+      AccessTokenValidity: 1  # 1 hour
+      IdTokenValidity: 1      # 1 hour
+      RefreshTokenValidity: 30 # 30 days
+      PreventUserExistenceErrors: ENABLED
+
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
       Handler: main.handler
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref UserPool
+          COGNITO_APP_CLIENT_ID: !Ref UserPoolClient
+          COGNITO_REGION: !Ref AWS::Region
       Events:
         RootPath:
           Type: HttpApi
@@ -64,3 +116,16 @@ Outputs:
   ApiFunction:
     Description: "Lambda Function ARN"
     Value: !GetAtt ApiFunction.Arn
+  UserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
+  UserPoolClientId:
+    Description: "Cognito User Pool Client ID"
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolClientId"
+  CognitoRegion:
+    Description: "AWS Region for Cognito"
+    Value: !Ref AWS::Region
