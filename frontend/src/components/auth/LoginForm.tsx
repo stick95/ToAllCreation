@@ -4,6 +4,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuthStore } from '../../stores/authStore'
 import { useNavigate, Link } from 'react-router-dom'
+import logo from '../../assets/img/taclogo.png'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
@@ -27,6 +28,7 @@ export function LoginForm() {
   return (
     <div className="auth-form-container">
       <div className="auth-form">
+        <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
         <h2>Sign In</h2>
         <p className="subtitle">Welcome back to ToAllCreation</p>
 

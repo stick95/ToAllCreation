@@ -4,6 +4,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuthStore } from '../../stores/authStore'
 import { Link } from 'react-router-dom'
+import logo from '../../assets/img/taclogo.png'
 
 export function RegisterForm() {
   const [email, setEmail] = useState('')
@@ -81,6 +82,7 @@ export function RegisterForm() {
     return (
       <div className="auth-form-container">
         <div className="auth-form">
+          <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
           <h2>Verify Email</h2>
           <p className="subtitle">
             We sent a verification code to <strong>{email}</strong>
@@ -135,6 +137,7 @@ export function RegisterForm() {
   return (
     <div className="auth-form-container">
       <div className="auth-form">
+        <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
         <h2>Create Account</h2>
         <p className="subtitle">Join ToAllCreation to start sharing</p>
 

@@ -3,6 +3,7 @@ import { useAuthStore } from './stores/authStore'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import logo from './assets/img/taclogo.png'
 import './App.css'
 
 // Dashboard component (protected)
@@ -12,6 +13,7 @@ function Dashboard() {
   return (
     <div className="App">
       <header className="App-header">
+        <img src={logo} alt="ToAllCreation Logo" className="App-logo" />
         <h1>ToAllCreation - Dashboard</h1>
         <p>Welcome, {user?.email || user?.username}!</p>
 
@@ -50,6 +52,7 @@ function Home() {
   return (
     <div className="App">
       <header className="App-header">
+        <img src={logo} alt="ToAllCreation Logo" className="App-logo" />
         <h1>ToAllCreation</h1>
         <p>Welcome to ToAllCreation</p>
 
