@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/authStore'
 // Create axios instance
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  timeout: 10000,
+  timeout: 60000, // 60 seconds - increased for video uploads to Facebook
   headers: {
     'Content-Type': 'application/json'
   }

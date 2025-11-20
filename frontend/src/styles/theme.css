@@ -179,6 +179,8 @@ h4 { font-size: 1.25rem; }
 h5 { font-size: 1rem; }
 h6 { font-size: 0.875rem; }
 
+p {margin-bottom: var(--spacing-md);}
+
 /* Alert/Error styles */
 .alert {
   padding: 1rem;

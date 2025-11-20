@@ -30,7 +30,7 @@ export function LoginForm() {
       <div className="auth-form">
         <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
         <h2>Sign In</h2>
-        <p className="subtitle">Welcome back to ToAllCreation</p>
+        <p className="subtitle">Go into all the world and preach the gospel to all creation.</p>
 
         {error && (
           <div className="error-message">

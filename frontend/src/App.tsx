@@ -3,43 +3,11 @@ import { useAuthStore } from './stores/authStore'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { Accounts } from './pages/Accounts'
+import { Dashboard } from './pages/Dashboard'
+import { Uploads } from './pages/Uploads'
 import logo from './assets/img/taclogo.png'
 import './App.css'
-
-// Dashboard component (protected)
-function Dashboard() {
-  const { user, signOut } = useAuthStore()
-
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} alt="ToAllCreation Logo" className="App-logo" />
-        <h1>ToAllCreation - Dashboard</h1>
-        <p>Welcome, {user?.email || user?.username}!</p>
-
-        <div className="card">
-          <h3>Your Profile</h3>
-          <pre style={{
-            background: '#1a1a1a',
-            padding: '15px',
-            borderRadius: '8px',
-            overflow: 'auto',
-            textAlign: 'left'
-          }}>
-            {JSON.stringify(user, null, 2)}
-          </pre>
-
-          <button
-            onClick={() => signOut()}
-            style={{ marginTop: '20px' }}
-          >
-            Sign Out
-          </button>
-        </div>
-      </header>
-    </div>
-  )
-}
 
 // Public home page
 function Home() {
@@ -53,8 +21,7 @@ function Home() {
     <div className="App">
       <header className="App-header">
         <img src={logo} alt="ToAllCreation Logo" className="App-logo" />
-        <h1>ToAllCreation</h1>
-        <p>Welcome to ToAllCreation</p>
+        <p>He said to them, “Go into all the world and preach the gospel to all creation."</p>
 
         <div className="card">
           <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
@@ -89,6 +56,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute>
+              <Accounts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/uploads"
+          element={
+            <ProtectedRoute>
+              <Uploads />
             </ProtectedRoute>
           }
         />

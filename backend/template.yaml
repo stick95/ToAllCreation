@@ -4,13 +4,141 @@ Description: ToAllCreation Backend - Hello World
 
 Globals:
   Function:
-    Timeout: 30
+    Timeout: 300  # 5 minutes for Instagram/Facebook video processing
     MemorySize: 512
     Runtime: python3.12
     Architectures:
       - arm64
 
 Resources:
+  # DynamoDB Table for Social Accounts
+  SocialAccountsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: toallcreation-social-accounts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: account_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: account_id
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  # DynamoDB Table for OAuth State (temporary storage with TTL)
+  OAuthStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: toallcreation-oauth-state
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: state_key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: state_key
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # DynamoDB Table for Upload Requests (async job tracking)
+  UploadRequestsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: toallcreation-upload-requests
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: request_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
+      KeySchema:
+        - AttributeName: request_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user_id-created_at-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true  # Auto-delete old requests after 90 days
+
+  # SQS Queue for Async Social Media Posting
+  PostingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: toallcreation-posting-queue
+      VisibilityTimeout: 360  # 6 minutes (longer than Lambda timeout)
+      MessageRetentionPeriod: 86400  # 24 hours
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt PostingDeadLetterQueue.Arn
+        maxReceiveCount: 3  # Retry up to 3 times before DLQ
+
+  # Dead Letter Queue for Failed Posts
+  PostingDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: toallcreation-posting-dlq
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  # S3 Bucket for Video Uploads
+  VideoUploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: toallcreation-video-uploads
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+              - DELETE
+            AllowedOrigins:
+              - "*"
+            MaxAge: 3600
+            ExposedHeaders:
+              - ETag
+              - x-amz-request-id
+              - x-amz-version-id
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVideos
+            Status: Enabled
+            ExpirationInDays: 7  # Auto-delete videos after 7 days
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # S3 Bucket Policy for Public Read Access
+  VideoUploadBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VideoUploadBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${VideoUploadBucket.Arn}/*"
+
   # Cognito User Pool
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -68,6 +196,30 @@ Resources:
           COGNITO_USER_POOL_ID: !Ref UserPool
           COGNITO_APP_CLIENT_ID: !Ref UserPoolClient
           COGNITO_REGION: !Ref AWS::Region
+          SOCIAL_ACCOUNTS_TABLE: !Ref SocialAccountsTable
+          OAUTH_STATE_TABLE: !Ref OAuthStateTable
+          UPLOAD_REQUESTS_TABLE: !Ref UploadRequestsTable
+          VIDEO_UPLOAD_BUCKET: !Ref VideoUploadBucket
+          POSTING_QUEUE_URL: !Ref PostingQueue
+          # URLs for OAuth redirects (from SSM Parameter Store)
+          API_BASE_URL: '{{resolve:ssm:/toallcreation/api_base_url}}'
+          FRONTEND_URL: '{{resolve:ssm:/toallcreation/frontend_url}}'
+          # CORS allowed origins
+          ALLOWED_ORIGINS: '{{resolve:ssm:/toallcreation/allowed_origins}}'
+          # Social Media OAuth Credentials
+          FACEBOOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/facebook/client_id}}'
+          FACEBOOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/facebook/client_secret}}'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialAccountsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OAuthStateTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UploadRequestsTable
+        - S3CrudPolicy:
+            BucketName: !Ref VideoUploadBucket
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt PostingQueue.QueueName
       Events:
         RootPath:
           Type: HttpApi
@@ -93,6 +245,34 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             ApiId: !Ref HttpApi
+
+  # Async Worker Lambda for Social Media Posting
+  PostingWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: posting_worker.handler
+      Timeout: 300  # 5 minutes for video processing
+      Environment:
+        Variables:
+          SOCIAL_ACCOUNTS_TABLE: !Ref SocialAccountsTable
+          UPLOAD_REQUESTS_TABLE: !Ref UploadRequestsTable
+          VIDEO_UPLOAD_BUCKET: !Ref VideoUploadBucket
+          FACEBOOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/facebook/client_id}}'
+          FACEBOOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/facebook/client_secret}}'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialAccountsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UploadRequestsTable
+        - S3CrudPolicy:
+            BucketName: !Ref VideoUploadBucket
+      Events:
+        PostingQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt PostingQueue.Arn
+            BatchSize: 1  # Process one message at a time for better error tracking
 
   HttpApi:
     Type: AWS::Serverless::HttpApi
