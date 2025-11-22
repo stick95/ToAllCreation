@@ -209,6 +209,8 @@ Resources:
           # Social Media OAuth Credentials
           FACEBOOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/facebook/client_id}}'
           FACEBOOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/facebook/client_secret}}'
+          TWITTER_CLIENT_ID: '{{resolve:ssm:/toallcreation/twitter/client_id}}'
+          TWITTER_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/twitter/client_secret}}'
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SocialAccountsTable
@@ -260,6 +262,8 @@ Resources:
           VIDEO_UPLOAD_BUCKET: !Ref VideoUploadBucket
           FACEBOOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/facebook/client_id}}'
           FACEBOOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/facebook/client_secret}}'
+          TWITTER_CLIENT_ID: '{{resolve:ssm:/toallcreation/twitter/client_id}}'
+          TWITTER_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/twitter/client_secret}}'
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SocialAccountsTable

@@ -14,6 +14,7 @@ from botocore.exceptions import ClientError
 # Import posting services
 from instagram_posting import InstagramPostingService, InstagramPostingError
 from facebook_posting import FacebookPostingService
+from twitter_posting import TwitterPostingService, TwitterPostingError
 
 # Setup logging
 logger = logging.getLogger()
@@ -223,6 +224,70 @@ def process_facebook_post(
         raise
 
 
+def process_twitter_post(
+    request_id: str,
+    user_id: str,
+    account_id: str,
+    video_url: str,
+    caption: str,
+    detailed_log: DetailedLogger
+) -> Dict[str, Any]:
+    """Process Twitter posting"""
+    detailed_log.log('INFO', f'Starting Twitter post for account {account_id}')
+
+    try:
+        # Get account details from DynamoDB
+        detailed_log.log('INFO', 'Fetching Twitter account details from database')
+        detailed_log.log('INFO', f'Query key: user_id={user_id}, account_id={account_id}')
+        response = social_accounts_table.get_item(
+            Key={
+                'user_id': user_id,
+                'account_id': account_id
+            }
+        )
+
+        detailed_log.log('INFO', f'DynamoDB response: {response}')
+
+        if 'Item' not in response:
+            raise Exception(f"Twitter account {account_id} not found for user {user_id}")
+
+        account = response['Item']
+        detailed_log.log('INFO', f'Account details retrieved: {account.get("username")}')
+
+        # Get access token
+        access_token = account.get('access_token')
+        twitter_user_id = account.get('platform_user_id')
+
+        if not access_token:
+            raise Exception("Missing Twitter access token")
+
+        detailed_log.log('INFO', f'Twitter User ID: {twitter_user_id}')
+        detailed_log.log('INFO', f'Video URL: {video_url}')
+        detailed_log.log('INFO', f'Tweet text length: {len(caption) if caption else 0} characters')
+
+        # Post to Twitter
+        detailed_log.log('INFO', 'Calling Twitter API...')
+        result = TwitterPostingService.post_video(
+            access_token=access_token,
+            video_url=video_url,
+            text=caption,
+            user_id=twitter_user_id
+        )
+
+        detailed_log.log('INFO', f'Twitter API returned: {json.dumps(result)}')
+
+        return result
+
+    except TwitterPostingError as e:
+        detailed_log.log('ERROR', f'Twitter posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+    except Exception as e:
+        detailed_log.log('ERROR', f'Twitter posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+
+
 def handler(event, context):
     """
     SQS Event Handler for Async Social Media Posting
@@ -266,6 +331,10 @@ def handler(event, context):
                 )
             elif platform == 'facebook':
                 result = process_facebook_post(
+                    request_id, user_id, destination, video_url, caption, detailed_log
+                )
+            elif platform == 'twitter':
+                result = process_twitter_post(
                     request_id, user_id, destination, video_url, caption, detailed_log
                 )
             else:

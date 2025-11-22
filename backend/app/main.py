@@ -10,6 +10,7 @@ import os
 import boto3
 import uuid
 import json
+import requests
 
 # Configure logging
 logger = logging.getLogger()
@@ -22,7 +23,7 @@ try:
     from .social_accounts import SocialAccountManager, SocialPlatform, AccountType
     from .oauth_providers import get_oauth_url, OAuthProviderFactory
     from .social_pages import SocialPagesService
-    from .oauth_token_exchange import FacebookTokenExchange, TokenExchangeError
+    from .oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TokenExchangeError
     from .oauth_state_manager import OAuthStateManager
     from .facebook_posting import FacebookPostingService, FacebookPostingError
     from .instagram_posting import InstagramPostingService, InstagramPostingError
@@ -37,7 +38,7 @@ except ImportError:
         from social_accounts import SocialAccountManager, SocialPlatform, AccountType
         from oauth_providers import get_oauth_url, OAuthProviderFactory
         from social_pages import SocialPagesService
-        from oauth_token_exchange import FacebookTokenExchange, TokenExchangeError
+        from oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TokenExchangeError
         from oauth_state_manager import OAuthStateManager
         from facebook_posting import FacebookPostingService, FacebookPostingError
         from instagram_posting import InstagramPostingService, InstagramPostingError
@@ -290,6 +291,69 @@ if AUTH_ENABLED:
                 # Redirect to page selection on frontend
                 # Uses the frontend_url captured during OAuth initiation
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&select_pages=true")
+
+            elif platform == "twitter":
+                client_id = os.environ.get("TWITTER_CLIENT_ID")
+                client_secret = os.environ.get("TWITTER_CLIENT_SECRET")
+                api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
+                redirect_uri = f"{api_base_url}/api/social/callback"
+
+                if not client_id or not client_secret:
+                    raise ValueError("Twitter OAuth credentials not configured")
+
+                # For Twitter OAuth 2.0 with PKCE, we use "challenge" as code_verifier
+                # (simplified PKCE for now - in production, store and retrieve properly)
+                code_verifier = "challenge"
+
+                # Exchange code for access token
+                token_data = TwitterTokenExchange.exchange_code(
+                    code=code,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri,
+                    code_verifier=code_verifier
+                )
+
+                access_token = token_data["access_token"]
+                refresh_token = token_data.get("refresh_token")
+                expires_in = token_data.get("expires_in", 7200)  # 2 hours default
+
+                # Get user profile info
+                user_info_url = "https://api.twitter.com/2/users/me"
+                user_info_headers = {
+                    "Authorization": f"Bearer {access_token}"
+                }
+                user_info_response = requests.get(user_info_url, headers=user_info_headers, timeout=10)
+
+                if user_info_response.status_code != 200:
+                    raise ValueError("Failed to fetch Twitter user info")
+
+                user_info = user_info_response.json()
+                twitter_user_data = user_info.get("data", {})
+                twitter_user_id = twitter_user_data.get("id")
+                twitter_username = twitter_user_data.get("username")
+                twitter_name = twitter_user_data.get("name")
+
+                # For Twitter, we directly save the account (no page selection needed)
+                account = SocialAccountManager.create_account(
+                    user_id=user_id,
+                    platform=platform,
+                    platform_user_id=twitter_user_id,
+                    access_token=access_token,
+                    refresh_token=refresh_token,
+                    token_expires_at=int(datetime.utcnow().timestamp()) + expires_in,
+                    account_type="user",
+                    username=twitter_username,
+                    profile_data={
+                        "name": twitter_name,
+                        "username": twitter_username
+                    }
+                )
+
+                logger.info(f"Twitter account linked: @{twitter_username}")
+
+                # Redirect back to accounts page with success
+                return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
 
             else:
                 # Other platforms not yet implemented
