@@ -157,17 +157,19 @@ aws ssm put-parameter \
 
 ### 3. Required API Access
 
-**Free Tier Limitations**:
-- ❌ Cannot post tweets or upload media
+**Free Tier** (Recommended):
+- ✅ Can post up to 1,500 tweets per month
+- ✅ Can upload media (images and videos)
 - ✅ Can authenticate users
-- ✅ Can read tweets
+- ✅ All required endpoints available (v1.1 media upload + v2 tweet creation)
+- ⚠️ Limited read/data retrieval capabilities
 
-**Basic Tier** ($100/month):
+**Basic Tier** ($200/month):
 - ✅ Can post up to 3,000 tweets per month
 - ✅ Can upload media
-- ✅ All required endpoints available
+- ✅ Enhanced read capabilities
 
-**Note**: You need at least Basic tier to test posting functionality.
+**Note**: The **Free tier is sufficient** for ToAllCreation's posting functionality! Our implementation uses the exact API combination (v1.1 for media + v2 for tweets) that works with the free tier.
 
 ### 4. Get OAuth Credentials
 
@@ -328,11 +330,11 @@ aws lambda get-function-configuration \
 | **Post Creation** | Graph API | v2 Tweets API |
 | **Text Limit** | No limit (caption) | 280 characters |
 | **Video Processing** | Synchronous | May be async |
-| **Free Tier** | Posting allowed | Read-only |
+| **Free Tier** | Posting allowed | 1,500 posts/month |
 
 ## Next Steps
 
-1. **Get Twitter API Access**: Apply for Basic tier ($100/month)
+1. **Get Twitter API Access**: Apply for Free tier (sufficient for posting functionality!)
 2. **Update SSM Parameters**: Replace placeholder values with real credentials
 3. **Frontend Updates**: Add Twitter icon and account display
 4. **Testing**: Test full OAuth and posting flow
