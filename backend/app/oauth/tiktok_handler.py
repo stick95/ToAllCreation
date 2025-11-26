@@ -164,13 +164,15 @@ class TikTokOAuthHandler(OAuthHandler):
         Returns:
             OAuthUserInfo with TikTok user ID and profile data
         """
-        response = requests.post(
-            self.USERINFO_URL,
+        # TikTok user info API uses GET with query parameters
+        fields = "open_id,union_id,avatar_url,display_name"
+        url = f"{self.USERINFO_URL}?fields={fields}"
+
+        response = requests.get(
+            url,
             headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json"
-            },
-            json={"fields": ["open_id", "union_id", "avatar_url", "display_name", "username"]}
+                "Authorization": f"Bearer {access_token}"
+            }
         )
         response.raise_for_status()
 
@@ -183,7 +185,7 @@ class TikTokOAuthHandler(OAuthHandler):
 
         return OAuthUserInfo(
             platform_user_id=user_data.get("open_id"),
-            username=user_data.get("username") or user_data.get("display_name"),
+            username=user_data.get("display_name"),
             email=None,  # TikTok doesn't provide email through API
             profile_data=user_data
         )
