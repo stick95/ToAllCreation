@@ -83,10 +83,20 @@ class TikTokOAuthHandler(OAuthHandler):
 
         data = response.json()
 
+        # Check for error in response
         if data.get("error"):
-            raise ValueError(f"TikTok OAuth error: {data.get('error_description', data.get('error'))}")
+            error_msg = data.get('error_description', data.get('error', 'Unknown error'))
+            raise ValueError(f"TikTok OAuth error: {error_msg}")
 
+        # TikTok v2 API returns tokens in "data" field
         token_data = data.get("data", {})
+
+        # Validate required fields exist
+        if not token_data.get("access_token"):
+            raise ValueError(f"TikTok OAuth: Missing access_token in response. Response: {data}")
+
+        if not token_data.get("refresh_token"):
+            raise ValueError(f"TikTok OAuth: Missing refresh_token in response. Response: {data}")
 
         return OAuthTokens(
             access_token=token_data["access_token"],
