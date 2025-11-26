@@ -35,6 +35,13 @@ export function Dashboard() {
     loadAccounts()
   }, [])
 
+  // Select all accounts by default when loaded
+  useEffect(() => {
+    if (accounts.length > 0 && selectedAccounts.length === 0) {
+      setSelectedAccounts(accounts.map(account => account.account_id))
+    }
+  }, [accounts])
+
   const loadAccounts = async () => {
     try {
       setLoading(true)
@@ -80,6 +87,18 @@ export function Dashboard() {
         : [...prev, accountId]
     )
   }
+
+  const toggleSelectAll = () => {
+    if (selectedAccounts.length === accounts.length) {
+      // Deselect all
+      setSelectedAccounts([])
+    } else {
+      // Select all
+      setSelectedAccounts(accounts.map(account => account.account_id))
+    }
+  }
+
+  const allSelected = accounts.length > 0 && selectedAccounts.length === accounts.length
 
   const handlePost = async () => {
     if (!videoFile) {
@@ -219,6 +238,22 @@ export function Dashboard() {
             </div>
           ) : (
             <div className="accounts-list">
+              {/* Select All Checkbox */}
+              <label className="account-checkbox select-all">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                />
+                <div className="account-info">
+                  <span className="account-platform" style={{ fontWeight: 'bold' }}>Select All</span>
+                  <span className="account-name">
+                    {selectedAccounts.length} of {accounts.length} selected
+                  </span>
+                </div>
+              </label>
+
+              {/* Individual Account Checkboxes */}
               {accounts.map(account => (
                 <label key={account.account_id} className="account-checkbox">
                   <input
