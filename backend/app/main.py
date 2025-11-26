@@ -27,6 +27,10 @@ try:
     from .oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TikTokTokenExchange, TokenExchangeError
     from .oauth_state_manager import OAuthStateManager
     from .oauth.facebook_handler import FacebookOAuthHandler
+    from .oauth.twitter_handler import TwitterOAuthHandler
+    from .oauth.youtube_handler import YouTubeOAuthHandler
+    from .oauth.linkedin_handler import LinkedInOAuthHandler
+    from .oauth.tiktok_handler import TikTokOAuthHandler
     from .facebook_posting import FacebookPostingService, FacebookPostingError
     from .instagram_posting import InstagramPostingService, InstagramPostingError
     from .s3_upload import S3UploadHelper
@@ -43,6 +47,10 @@ except ImportError:
         from oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TikTokTokenExchange, TokenExchangeError
         from oauth_state_manager import OAuthStateManager
         from oauth.facebook_handler import FacebookOAuthHandler
+        from oauth.twitter_handler import TwitterOAuthHandler
+        from oauth.youtube_handler import YouTubeOAuthHandler
+        from oauth.linkedin_handler import LinkedInOAuthHandler
+        from oauth.tiktok_handler import TikTokOAuthHandler
         from facebook_posting import FacebookPostingService, FacebookPostingError
         from instagram_posting import InstagramPostingService, InstagramPostingError
         from s3_upload import S3UploadHelper
@@ -356,9 +364,11 @@ if AUTH_ENABLED:
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&select_pages=true")
 
             elif platform == "twitter":
-                # OAuth 1.0a flow
+                # Twitter OAuth 1.0a flow using handler
                 api_key = os.environ.get("TWITTER_API_KEY")
                 api_secret = os.environ.get("TWITTER_API_SECRET")
+                api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
+                redirect_uri = f"{api_base_url}/api/social/callback"
 
                 if not api_key or not api_secret:
                     raise ValueError("Twitter OAuth credentials not configured")
@@ -371,43 +381,43 @@ if AUTH_ENABLED:
                 if not oauth_token_secret:
                     raise ValueError("Missing oauth_token_secret in state")
 
+                # Initialize Twitter OAuth handler
+                handler = TwitterOAuthHandler(api_key, api_secret, redirect_uri)
+
                 # Exchange request token for access token
-                token_data = TwitterTokenExchange.exchange_code(
+                tokens = handler.exchange_code(
                     oauth_token=oauth_token,
                     oauth_verifier=oauth_verifier,
-                    oauth_token_secret=oauth_token_secret,
-                    api_key=api_key,
-                    api_secret=api_secret
+                    oauth_token_secret=oauth_token_secret
                 )
 
-                access_token = token_data["access_token"]
-                access_token_secret = token_data["access_token_secret"]
-                twitter_user_id = token_data["user_id"]
-                twitter_username = token_data["screen_name"]
+                # Get user info
+                user_info = handler.get_user_info(
+                    access_token=tokens.access_token,
+                    access_token_secret=tokens.refresh_token  # Secret is stored in refresh_token field
+                )
 
                 # For Twitter, we directly save the account (no page selection needed)
                 # Store access_token_secret in refresh_token field (reusing existing field)
                 account = SocialAccountManager.create_account(
                     user_id=user_id,
                     platform=platform,
-                    platform_user_id=twitter_user_id,
-                    access_token=access_token,
-                    refresh_token=access_token_secret,  # Store OAuth 1.0a token secret here
+                    platform_user_id=user_info.platform_user_id,
+                    access_token=tokens.access_token,
+                    refresh_token=tokens.refresh_token,  # Store OAuth 1.0a token secret here
                     token_expires_at=None,  # OAuth 1.0a tokens don't expire
                     account_type="user",
-                    username=twitter_username,
-                    profile_data={
-                        "username": twitter_username
-                    }
+                    username=user_info.username,
+                    profile_data=user_info.profile_data
                 )
 
-                logger.info(f"Twitter account linked: @{twitter_username}")
+                logger.info(f"Twitter account linked: @{user_info.username}")
 
                 # Redirect back to accounts page with success
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
 
             elif platform == "youtube":
-                # YouTube OAuth 2.0 flow
+                # YouTube OAuth 2.0 flow using handler
                 client_id = os.environ.get("YOUTUBE_CLIENT_ID")
                 # YouTube client secret is stored in SSM Parameter Store (SecureString)
                 from ssm_helper import get_youtube_client_secret
@@ -419,51 +429,38 @@ if AUTH_ENABLED:
                 if not client_id or not client_secret:
                     raise ValueError("YouTube OAuth credentials not configured")
 
-                # Exchange code for tokens
-                from oauth_token_exchange import YouTubeTokenExchange
-                token_data = YouTubeTokenExchange.exchange_code(
-                    code=code,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    redirect_uri=redirect_uri
-                )
+                # Initialize YouTube OAuth handler
+                handler = YouTubeOAuthHandler(client_id, client_secret, redirect_uri)
 
-                access_token = token_data["access_token"]
-                refresh_token = token_data.get("refresh_token")
-                expires_in = token_data.get("expires_in", 3600)
-                token_expires_at = int(time.time()) + expires_in
+                # Exchange code for tokens
+                tokens = handler.exchange_code(code)
+
+                # Calculate token expiration
+                token_expires_at = int(time.time()) + tokens.expires_in if tokens.expires_in else None
 
                 # Get channel information
-                from youtube_posting import YouTubePostingService
-                channel_info = YouTubePostingService.get_channel_info(access_token)
-
-                channel_id = channel_info["channel_id"]
-                channel_title = channel_info["title"]
+                channel_info = handler.get_channel_info(tokens.access_token)
 
                 # Save YouTube account
                 account = SocialAccountManager.create_account(
                     user_id=user_id,
                     platform=platform,
-                    platform_user_id=channel_id,
-                    access_token=access_token,
-                    refresh_token=refresh_token,
+                    platform_user_id=channel_info["id"],
+                    access_token=tokens.access_token,
+                    refresh_token=tokens.refresh_token,
                     token_expires_at=token_expires_at,
                     account_type="user",
-                    username=channel_title,
-                    profile_data={
-                        "channel_id": channel_id,
-                        "channel_title": channel_title,
-                        "thumbnail": channel_info.get("thumbnail")
-                    }
+                    username=channel_info["title"],
+                    profile_data=channel_info
                 )
 
-                logger.info(f"YouTube channel linked: {channel_title}")
+                logger.info(f"YouTube channel linked: {channel_info['title']}")
 
                 # Redirect back to accounts page with success
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
 
             elif platform == "linkedin":
-                # LinkedIn OAuth 2.0 flow
+                # LinkedIn OAuth 2.0 flow using handler
                 client_id = os.environ.get("LINKEDIN_CLIENT_ID")
                 client_secret = os.environ.get("LINKEDIN_CLIENT_SECRET")
 
@@ -473,35 +470,17 @@ if AUTH_ENABLED:
                 if not client_id or not client_secret:
                     raise ValueError("LinkedIn OAuth credentials not configured")
 
-                # Exchange code for tokens
-                from oauth_token_exchange import LinkedInTokenExchange
-                token_data = LinkedInTokenExchange.exchange_code(
-                    code=code,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    redirect_uri=redirect_uri
-                )
+                # Initialize LinkedIn OAuth handler
+                handler = LinkedInOAuthHandler(client_id, client_secret, redirect_uri)
 
-                access_token = token_data["access_token"]
-                expires_in = token_data.get("expires_in", 5184000)  # 60 days default
-                token_expires_at = int(time.time()) + expires_in
+                # Exchange code for tokens
+                tokens = handler.exchange_code(code)
+
+                # Calculate token expiration
+                token_expires_at = int(time.time()) + tokens.expires_in if tokens.expires_in else None
 
                 # Get user profile information
-                profile_url = "https://api.linkedin.com/v2/userinfo"
-                headers = {
-                    "Authorization": f"Bearer {access_token}"
-                }
-
-                import requests
-                profile_response = requests.get(profile_url, headers=headers, timeout=10)
-                profile_response.raise_for_status()
-                profile_data = profile_response.json()
-
-                # Extract profile information
-                linkedin_id = profile_data.get("sub")  # LinkedIn user ID
-                name = profile_data.get("name")
-                email = profile_data.get("email")
-                picture = profile_data.get("picture")
+                user_info = handler.get_user_info(tokens.access_token)
 
                 # Note: Organization posting requires Community Management API access
                 # For now, save as personal account
@@ -511,25 +490,22 @@ if AUTH_ENABLED:
                 account = SocialAccountManager.create_account(
                     user_id=user_id,
                     platform=platform,
-                    platform_user_id=linkedin_id,
-                    access_token=access_token,
+                    platform_user_id=user_info.platform_user_id,
+                    access_token=tokens.access_token,
+                    refresh_token=tokens.refresh_token,
                     token_expires_at=token_expires_at,
                     account_type="user",
-                    username=name,
-                    profile_data={
-                        "name": name,
-                        "email": email,
-                        "picture": picture
-                    }
+                    username=user_info.username,
+                    profile_data=user_info.profile_data
                 )
 
-                logger.info(f"LinkedIn account linked: {name}")
+                logger.info(f"LinkedIn account linked: {user_info.username}")
 
                 # Redirect back to accounts page with success
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
 
             elif platform == "tiktok":
-                # TikTok OAuth 2.0 flow
+                # TikTok OAuth 2.0 flow using handler
                 client_key = os.environ.get("TIKTOK_CLIENT_ID")
                 client_secret = os.environ.get("TIKTOK_CLIENT_SECRET")
 
@@ -539,57 +515,32 @@ if AUTH_ENABLED:
                 if not client_key or not client_secret:
                     raise ValueError("TikTok OAuth credentials not configured")
 
-                # Exchange code for tokens
-                token_data = TikTokTokenExchange.exchange_code(
-                    code=code,
-                    client_key=client_key,
-                    client_secret=client_secret,
-                    redirect_uri=redirect_uri
-                )
+                # Initialize TikTok OAuth handler
+                handler = TikTokOAuthHandler(client_key, client_secret, redirect_uri)
 
-                access_token = token_data["access_token"]
-                expires_in = token_data.get("expires_in", 86400)  # 24 hours default
-                token_expires_at = int(time.time()) + expires_in
-                refresh_token = token_data.get("refresh_token")
-                open_id = token_data.get("open_id")  # TikTok user ID
+                # Exchange code for tokens
+                tokens = handler.exchange_code(code)
+
+                # Calculate token expiration
+                token_expires_at = int(time.time()) + tokens.expires_in if tokens.expires_in else None
 
                 # Get user profile information
-                profile_url = "https://open.tiktokapis.com/v2/user/info/"
-                headers = {
-                    "Authorization": f"Bearer {access_token}"
-                }
-                params = {
-                    "fields": "open_id,union_id,avatar_url,display_name"
-                }
-
-                import requests
-                profile_response = requests.get(profile_url, headers=headers, params=params, timeout=10)
-                profile_response.raise_for_status()
-                profile_json = profile_response.json()
-
-                # TikTok response format: {"data": {"user": {...}}}
-                user_data = profile_json.get("data", {}).get("user", {})
-                display_name = user_data.get("display_name")
-                avatar_url = user_data.get("avatar_url")
+                user_info = handler.get_user_info(tokens.access_token)
 
                 # Save TikTok account
                 account = SocialAccountManager.create_account(
                     user_id=user_id,
                     platform=platform,
-                    platform_user_id=open_id,
-                    access_token=access_token,
-                    refresh_token=refresh_token,
+                    platform_user_id=user_info.platform_user_id,
+                    access_token=tokens.access_token,
+                    refresh_token=tokens.refresh_token,
                     token_expires_at=token_expires_at,
                     account_type="user",
-                    username=display_name,
-                    profile_data={
-                        "display_name": display_name,
-                        "avatar_url": avatar_url,
-                        "open_id": open_id
-                    }
+                    username=user_info.username,
+                    profile_data=user_info.profile_data
                 )
 
-                logger.info(f"TikTok account linked: {display_name}")
+                logger.info(f"TikTok account linked: {user_info.username}")
 
                 # Redirect back to accounts page with success
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
