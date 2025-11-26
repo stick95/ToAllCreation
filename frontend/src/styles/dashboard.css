@@ -306,6 +306,16 @@
   border-color: var(--primary-blue);
 }
 
+.account-checkbox.select-all {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.account-checkbox.select-all:hover {
+  background: var(--gray-200);
+  border-color: var(--gray-400);
+}
+
 .account-checkbox input[type="checkbox"] {
   width: 20px;
   height: 20px;
