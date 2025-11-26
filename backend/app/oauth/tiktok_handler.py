@@ -88,8 +88,12 @@ class TikTokOAuthHandler(OAuthHandler):
             error_msg = data.get('error_description', data.get('error', 'Unknown error'))
             raise ValueError(f"TikTok OAuth error: {error_msg}")
 
-        # TikTok v2 API returns tokens in "data" field
-        token_data = data.get("data", {})
+        # TikTok v2 API can return tokens either at root level or in "data" field
+        # Check if tokens are in a "data" field or at root level
+        if "data" in data and isinstance(data["data"], dict) and "access_token" in data["data"]:
+            token_data = data["data"]
+        else:
+            token_data = data
 
         # Validate required fields exist
         if not token_data.get("access_token"):
@@ -136,7 +140,11 @@ class TikTokOAuthHandler(OAuthHandler):
         if data.get("error"):
             raise ValueError(f"TikTok OAuth refresh error: {data.get('error_description', data.get('error'))}")
 
-        token_data = data.get("data", {})
+        # TikTok v2 API can return tokens either at root level or in "data" field
+        if "data" in data and isinstance(data["data"], dict) and "access_token" in data["data"]:
+            token_data = data["data"]
+        else:
+            token_data = data
 
         return OAuthTokens(
             access_token=token_data["access_token"],
