@@ -26,6 +26,7 @@ try:
     from .social_pages import SocialPagesService
     from .oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TikTokTokenExchange, TokenExchangeError
     from .oauth_state_manager import OAuthStateManager
+    from .oauth.facebook_handler import FacebookOAuthHandler
     from .facebook_posting import FacebookPostingService, FacebookPostingError
     from .instagram_posting import InstagramPostingService, InstagramPostingError
     from .s3_upload import S3UploadHelper
@@ -41,6 +42,7 @@ except ImportError:
         from social_pages import SocialPagesService
         from oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TikTokTokenExchange, TokenExchangeError
         from oauth_state_manager import OAuthStateManager
+        from oauth.facebook_handler import FacebookOAuthHandler
         from facebook_posting import FacebookPostingService, FacebookPostingError
         from instagram_posting import InstagramPostingService, InstagramPostingError
         from s3_upload import S3UploadHelper
@@ -321,29 +323,19 @@ if AUTH_ENABLED:
                 if not client_id or not client_secret:
                     raise ValueError("Facebook OAuth credentials not configured")
 
-                # Exchange code for access token
-                token_data = FacebookTokenExchange.exchange_code(
-                    code=code,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    redirect_uri=redirect_uri
-                )
+                # Initialize Facebook OAuth handler
+                handler = FacebookOAuthHandler(client_id, client_secret, redirect_uri)
 
-                access_token = token_data["access_token"]
-                expires_in = token_data.get("expires_in", 5184000)
-
-                # Get long-lived token (60 days)
-                long_lived = FacebookTokenExchange.get_long_lived_token(
-                    short_lived_token=access_token,
-                    client_id=client_id,
-                    client_secret=client_secret
-                )
-
-                access_token = long_lived["access_token"]
-                expires_in = long_lived.get("expires_in", 5184000)
+                # Exchange code for long-lived access token (60 days)
+                tokens = handler.exchange_code(code)
+                access_token = tokens.access_token
+                expires_in = tokens.expires_in
 
                 # Fetch available accounts (Facebook Pages or Instagram accounts)
-                pages = SocialPagesService.get_available_accounts(platform, access_token)
+                if platform == "facebook":
+                    pages = handler.get_pages(access_token)
+                else:  # instagram
+                    pages = handler.get_instagram_accounts(access_token)
 
                 if not pages:
                     platform_name = "Instagram Business accounts" if platform == "instagram" else "Facebook Pages"
