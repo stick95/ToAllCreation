@@ -11,7 +11,7 @@ import '../styles/accounts.css'
 // Import platform icons
 import facebookIcon from '../assets/icons/facebook.svg'
 import instagramIcon from '../assets/icons/instagram.png'
-import twitterIcon from '../assets/icons/twitter.png'
+import twitterIcon from '../assets/icons/twitter.svg'
 import youtubeIcon from '../assets/icons/youtube.svg'
 import linkedinIcon from '../assets/icons/linkedin.png'
 import tiktokIcon from '../assets/icons/tiktok.svg'
