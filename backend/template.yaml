@@ -209,8 +209,13 @@ Resources:
           # Social Media OAuth Credentials
           FACEBOOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/facebook/client_id}}'
           FACEBOOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/facebook/client_secret}}'
-          TWITTER_CLIENT_ID: '{{resolve:ssm:/toallcreation/twitter/client_id}}'
-          TWITTER_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/twitter/client_secret}}'
+          TWITTER_API_KEY: '{{resolve:ssm:/toallcreation/twitter/api_key}}'
+          TWITTER_API_SECRET: '{{resolve:ssm:/toallcreation/twitter/api_secret}}'
+          YOUTUBE_CLIENT_ID: '{{resolve:ssm:/toallcreation/youtube/client_id}}'
+          LINKEDIN_CLIENT_ID: '{{resolve:ssm:/toallcreation/linkedin/client_id}}'
+          LINKEDIN_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/linkedin/client_secret}}'
+          TIKTOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/tiktok/client_id}}'
+          TIKTOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/tiktok/client_secret}}'
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SocialAccountsTable
@@ -222,6 +227,13 @@ Resources:
             BucketName: !Ref VideoUploadBucket
         - SQSSendMessagePolicy:
             QueueName: !GetAtt PostingQueue.QueueName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/toallcreation/*'
       Events:
         RootPath:
           Type: HttpApi
@@ -262,8 +274,13 @@ Resources:
           VIDEO_UPLOAD_BUCKET: !Ref VideoUploadBucket
           FACEBOOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/facebook/client_id}}'
           FACEBOOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/facebook/client_secret}}'
-          TWITTER_CLIENT_ID: '{{resolve:ssm:/toallcreation/twitter/client_id}}'
-          TWITTER_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/twitter/client_secret}}'
+          TWITTER_API_KEY: '{{resolve:ssm:/toallcreation/twitter/api_key}}'
+          TWITTER_API_SECRET: '{{resolve:ssm:/toallcreation/twitter/api_secret}}'
+          YOUTUBE_CLIENT_ID: '{{resolve:ssm:/toallcreation/youtube/client_id}}'
+          LINKEDIN_CLIENT_ID: '{{resolve:ssm:/toallcreation/linkedin/client_id}}'
+          LINKEDIN_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/linkedin/client_secret}}'
+          TIKTOK_CLIENT_ID: '{{resolve:ssm:/toallcreation/tiktok/client_id}}'
+          TIKTOK_CLIENT_SECRET: '{{resolve:ssm:/toallcreation/tiktok/client_secret}}'
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SocialAccountsTable
@@ -271,6 +288,13 @@ Resources:
             TableName: !Ref UploadRequestsTable
         - S3CrudPolicy:
             BucketName: !Ref VideoUploadBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/toallcreation/*'
       Events:
         PostingQueueEvent:
           Type: SQS

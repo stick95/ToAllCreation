@@ -70,7 +70,7 @@ export function Uploads() {
   const loadRequests = async (silent = false) => {
     try {
       if (!silent) setLoading(true)
-      const response = await apiClient.get('/api/social/uploads?limit=50')
+      const response = await apiClient.get('/api/social/uploads?limit=5')
       setRequests(response.data.requests || [])
       setError(null)
     } catch (err: any) {

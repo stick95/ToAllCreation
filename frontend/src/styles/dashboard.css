@@ -96,6 +96,7 @@
   padding: var(--spacing-md) var(--spacing-lg);
   text-align: left;
   border: none;
+  border-bottom: 1px solid var(--gray-200);
   background: none;
   color: var(--gray-800);
   font-size: 0.9rem;
@@ -110,8 +111,30 @@
   background: var(--gray-100);
 }
 
-.menu-item + .menu-item {
-  border-top: 1px solid var(--gray-200);
+.menu-divider {
+  height: 1px;
+  background: var(--gray-300);
+  margin: 0;
+  border: none;
+}
+
+.menu-divider + .menu-item {
+  border-top: 1px solid var(--gray-300);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item-secondary {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  font-weight: 400;
+}
+
+.menu-item-secondary:hover {
+  color: var(--primary-blue);
+  background: var(--gray-100);
 }
 
 .dashboard-header h1 {

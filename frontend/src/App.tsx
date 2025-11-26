@@ -6,6 +6,8 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { Accounts } from './pages/Accounts'
 import { Dashboard } from './pages/Dashboard'
 import { Uploads } from './pages/Uploads'
+import { Privacy } from './pages/Privacy'
+import { Terms } from './pages/Terms'
 import logo from './assets/img/taclogo.png'
 import './App.css'
 
@@ -72,6 +74,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Uploads />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <ProtectedRoute>
+              <Privacy />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <ProtectedRoute>
+              <Terms />
             </ProtectedRoute>
           }
         />

@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import logo from '../assets/img/taclogo.png'
+import '../styles/dashboard.css'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -46,6 +47,13 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                 <button onClick={() => signOut()} className="menu-item">
                   Sign Out
                 </button>
+                <div className="menu-divider"></div>
+                <Link to="/privacy" className="menu-item menu-item-secondary">
+                  Privacy
+                </Link>
+                <Link to="/terms" className="menu-item menu-item-secondary">
+                  Terms
+                </Link>
               </div>
             )}
           </div>

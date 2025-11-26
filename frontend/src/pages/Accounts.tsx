@@ -45,10 +45,22 @@ const PLATFORMS = [
     description: 'Post to your personal account'
   },
   {
+    id: 'youtube',
+    name: 'YouTube',
+    icon: '📹',
+    description: 'Upload videos as YouTube Shorts'
+  },
+  {
     id: 'linkedin',
     name: 'LinkedIn',
     icon: '💼',
     description: 'Post to your profile or Company Pages you manage'
+  },
+  {
+    id: 'tiktok',
+    name: 'TikTok',
+    icon: '🎵',
+    description: 'Upload short videos to your TikTok account'
   }
 ]
 

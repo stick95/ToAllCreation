@@ -11,6 +11,7 @@ import boto3
 import uuid
 import json
 import requests
+import time
 
 # Configure logging
 logger = logging.getLogger()
@@ -23,7 +24,7 @@ try:
     from .social_accounts import SocialAccountManager, SocialPlatform, AccountType
     from .oauth_providers import get_oauth_url, OAuthProviderFactory
     from .social_pages import SocialPagesService
-    from .oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TokenExchangeError
+    from .oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TikTokTokenExchange, TokenExchangeError
     from .oauth_state_manager import OAuthStateManager
     from .facebook_posting import FacebookPostingService, FacebookPostingError
     from .instagram_posting import InstagramPostingService, InstagramPostingError
@@ -38,7 +39,7 @@ except ImportError:
         from social_accounts import SocialAccountManager, SocialPlatform, AccountType
         from oauth_providers import get_oauth_url, OAuthProviderFactory
         from social_pages import SocialPagesService
-        from oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TokenExchangeError
+        from oauth_token_exchange import FacebookTokenExchange, TwitterTokenExchange, TikTokTokenExchange, TokenExchangeError
         from oauth_state_manager import OAuthStateManager
         from facebook_posting import FacebookPostingService, FacebookPostingError
         from instagram_posting import InstagramPostingService, InstagramPostingError
@@ -61,6 +62,28 @@ except ImportError:
         FacebookTokenExchange = None
         TokenExchangeError = None
         logger.warning(f"⚠️ Authentication not loaded: {str(e)}")
+
+
+# Utility function to convert DynamoDB Decimal objects to native Python types
+def convert_decimals(obj):
+    """
+    Recursively convert Decimal objects to int or float for JSON serialization
+    """
+    from decimal import Decimal
+
+    if isinstance(obj, list):
+        return [convert_decimals(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_decimals(value) for key, value in obj.items()}
+    elif isinstance(obj, Decimal):
+        # Convert to int if it's a whole number, otherwise float
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
+
 
 app = FastAPI(title="ToAllCreation API", version="0.1.0")
 
@@ -178,7 +201,7 @@ if AUTH_ENABLED:
         """
         try:
             # Validate platform
-            if platform not in ["facebook", "instagram", "twitter", "linkedin"]:
+            if platform not in ["facebook", "instagram", "twitter", "youtube", "linkedin", "tiktok"]:
                 raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
 
             # Capture origin for redirect after OAuth
@@ -190,17 +213,45 @@ if AUTH_ENABLED:
 
             # Generate state token for CSRF protection
             state = secrets.token_urlsafe(32)
-            oauth_state_manager.save_state(state, {
-                "user_id": user_id,
-                "platform": platform,
-                "frontend_url": frontend_url
-            })
 
             # Generate OAuth URL (redirect_uri should point to your callback endpoint)
             # Use the API Gateway URL for the callback
             api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
             redirect_uri = f"{api_base_url}/api/social/callback"
             auth_url = get_oauth_url(platform, redirect_uri, state)
+
+            # For Twitter OAuth 1.0a, the auth_url is a tuple (url, oauth_token_secret)
+            # For other platforms, it's just the URL
+            if platform == "twitter" and isinstance(auth_url, tuple):
+                auth_url, oauth_token_secret = auth_url
+
+                # Extract oauth_token from the auth URL
+                from urllib.parse import urlparse, parse_qs
+                parsed_url = urlparse(auth_url)
+                query_params = parse_qs(parsed_url.query)
+                oauth_token = query_params.get('oauth_token', [None])[0]
+
+                # Store oauth_token_secret along with state for callback
+                oauth_state_manager.save_state(state, {
+                    "user_id": user_id,
+                    "platform": platform,
+                    "frontend_url": frontend_url,
+                    "oauth_token_secret": oauth_token_secret
+                })
+
+                # Also store a mapping from oauth_token to state (for OAuth 1.0a callback)
+                # Twitter doesn't pass state back, only oauth_token
+                if oauth_token:
+                    oauth_state_manager.save_state(f"twitter_token_{oauth_token}", {
+                        "state": state
+                    })
+            else:
+                # Standard OAuth 2.0 flow
+                oauth_state_manager.save_state(state, {
+                    "user_id": user_id,
+                    "platform": platform,
+                    "frontend_url": frontend_url
+                })
 
             return {
                 "authorization_url": auth_url,
@@ -214,16 +265,36 @@ if AUTH_ENABLED:
 
     @app.get("/api/social/callback")
     async def oauth_callback(
-        code: str = Query(...),
-        state: str = Query(...),
-        error: Optional[str] = Query(None)
+        code: Optional[str] = Query(None),
+        state: Optional[str] = Query(None),
+        error: Optional[str] = Query(None),
+        oauth_token: Optional[str] = Query(None),  # Twitter OAuth 1.0a
+        oauth_verifier: Optional[str] = Query(None),  # Twitter OAuth 1.0a
+        denied: Optional[str] = Query(None)  # Twitter OAuth 1.0a denial
     ):
         """
         OAuth callback endpoint
         Called by social platforms after user authorizes
+        Supports both OAuth 2.0 (code/state) and OAuth 1.0a (oauth_token/oauth_verifier)
         """
         # Get OAuth state data
         default_frontend = os.environ.get('FRONTEND_URL', 'https://d1p7fiwu5m4weh.cloudfront.net')
+
+        # Handle OAuth 1.0a denial (Twitter)
+        if denied:
+            logger.error(f"OAuth 1.0a denied: {denied}")
+            return RedirectResponse(url=f"{default_frontend}/accounts?error=Authorization+denied")
+
+        # For OAuth 1.0a (Twitter), state is not passed back - look it up from oauth_token
+        if not state and oauth_token:
+            # Look up state from oauth_token mapping
+            token_mapping = oauth_state_manager.get_state(f"twitter_token_{oauth_token}", delete_after_read=True)
+            if token_mapping:
+                state = token_mapping.get("state")
+
+        if not state:
+            raise HTTPException(status_code=400, detail="Missing state parameter")
+
         oauth_data = oauth_state_manager.get_state(state, delete_after_read=True)
 
         if not oauth_data:
@@ -233,7 +304,7 @@ if AUTH_ENABLED:
         platform = oauth_data["platform"]
         frontend_url = oauth_data.get("frontend_url", default_frontend)
 
-        # Handle OAuth errors
+        # Handle OAuth 2.0 errors
         if error:
             logger.error(f"OAuth error: {error}")
             return RedirectResponse(url=f"{frontend_url}/accounts?error={error}")
@@ -293,64 +364,240 @@ if AUTH_ENABLED:
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&select_pages=true")
 
             elif platform == "twitter":
-                client_id = os.environ.get("TWITTER_CLIENT_ID")
-                client_secret = os.environ.get("TWITTER_CLIENT_SECRET")
-                api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
-                redirect_uri = f"{api_base_url}/api/social/callback"
+                # OAuth 1.0a flow
+                api_key = os.environ.get("TWITTER_API_KEY")
+                api_secret = os.environ.get("TWITTER_API_SECRET")
 
-                if not client_id or not client_secret:
+                if not api_key or not api_secret:
                     raise ValueError("Twitter OAuth credentials not configured")
 
-                # For Twitter OAuth 2.0 with PKCE, we use "challenge" as code_verifier
-                # (simplified PKCE for now - in production, store and retrieve properly)
-                code_verifier = "challenge"
+                if not oauth_token or not oauth_verifier:
+                    raise ValueError("Missing OAuth 1.0a parameters (oauth_token, oauth_verifier)")
 
-                # Exchange code for access token
+                # Retrieve oauth_token_secret from state
+                oauth_token_secret = oauth_data.get("oauth_token_secret")
+                if not oauth_token_secret:
+                    raise ValueError("Missing oauth_token_secret in state")
+
+                # Exchange request token for access token
                 token_data = TwitterTokenExchange.exchange_code(
-                    code=code,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    redirect_uri=redirect_uri,
-                    code_verifier=code_verifier
+                    oauth_token=oauth_token,
+                    oauth_verifier=oauth_verifier,
+                    oauth_token_secret=oauth_token_secret,
+                    api_key=api_key,
+                    api_secret=api_secret
                 )
 
                 access_token = token_data["access_token"]
-                refresh_token = token_data.get("refresh_token")
-                expires_in = token_data.get("expires_in", 7200)  # 2 hours default
-
-                # Get user profile info
-                user_info_url = "https://api.twitter.com/2/users/me"
-                user_info_headers = {
-                    "Authorization": f"Bearer {access_token}"
-                }
-                user_info_response = requests.get(user_info_url, headers=user_info_headers, timeout=10)
-
-                if user_info_response.status_code != 200:
-                    raise ValueError("Failed to fetch Twitter user info")
-
-                user_info = user_info_response.json()
-                twitter_user_data = user_info.get("data", {})
-                twitter_user_id = twitter_user_data.get("id")
-                twitter_username = twitter_user_data.get("username")
-                twitter_name = twitter_user_data.get("name")
+                access_token_secret = token_data["access_token_secret"]
+                twitter_user_id = token_data["user_id"]
+                twitter_username = token_data["screen_name"]
 
                 # For Twitter, we directly save the account (no page selection needed)
+                # Store access_token_secret in refresh_token field (reusing existing field)
                 account = SocialAccountManager.create_account(
                     user_id=user_id,
                     platform=platform,
                     platform_user_id=twitter_user_id,
                     access_token=access_token,
-                    refresh_token=refresh_token,
-                    token_expires_at=int(datetime.utcnow().timestamp()) + expires_in,
+                    refresh_token=access_token_secret,  # Store OAuth 1.0a token secret here
+                    token_expires_at=None,  # OAuth 1.0a tokens don't expire
                     account_type="user",
                     username=twitter_username,
                     profile_data={
-                        "name": twitter_name,
                         "username": twitter_username
                     }
                 )
 
                 logger.info(f"Twitter account linked: @{twitter_username}")
+
+                # Redirect back to accounts page with success
+                return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
+
+            elif platform == "youtube":
+                # YouTube OAuth 2.0 flow
+                client_id = os.environ.get("YOUTUBE_CLIENT_ID")
+                # YouTube client secret is stored in SSM Parameter Store (SecureString)
+                from ssm_helper import get_youtube_client_secret
+                client_secret = get_youtube_client_secret()
+
+                api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
+                redirect_uri = f"{api_base_url}/api/social/callback"
+
+                if not client_id or not client_secret:
+                    raise ValueError("YouTube OAuth credentials not configured")
+
+                # Exchange code for tokens
+                from oauth_token_exchange import YouTubeTokenExchange
+                token_data = YouTubeTokenExchange.exchange_code(
+                    code=code,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri
+                )
+
+                access_token = token_data["access_token"]
+                refresh_token = token_data.get("refresh_token")
+                expires_in = token_data.get("expires_in", 3600)
+                token_expires_at = int(time.time()) + expires_in
+
+                # Get channel information
+                from youtube_posting import YouTubePostingService
+                channel_info = YouTubePostingService.get_channel_info(access_token)
+
+                channel_id = channel_info["channel_id"]
+                channel_title = channel_info["title"]
+
+                # Save YouTube account
+                account = SocialAccountManager.create_account(
+                    user_id=user_id,
+                    platform=platform,
+                    platform_user_id=channel_id,
+                    access_token=access_token,
+                    refresh_token=refresh_token,
+                    token_expires_at=token_expires_at,
+                    account_type="user",
+                    username=channel_title,
+                    profile_data={
+                        "channel_id": channel_id,
+                        "channel_title": channel_title,
+                        "thumbnail": channel_info.get("thumbnail")
+                    }
+                )
+
+                logger.info(f"YouTube channel linked: {channel_title}")
+
+                # Redirect back to accounts page with success
+                return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
+
+            elif platform == "linkedin":
+                # LinkedIn OAuth 2.0 flow
+                client_id = os.environ.get("LINKEDIN_CLIENT_ID")
+                client_secret = os.environ.get("LINKEDIN_CLIENT_SECRET")
+
+                api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
+                redirect_uri = f"{api_base_url}/api/social/callback"
+
+                if not client_id or not client_secret:
+                    raise ValueError("LinkedIn OAuth credentials not configured")
+
+                # Exchange code for tokens
+                from oauth_token_exchange import LinkedInTokenExchange
+                token_data = LinkedInTokenExchange.exchange_code(
+                    code=code,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri
+                )
+
+                access_token = token_data["access_token"]
+                expires_in = token_data.get("expires_in", 5184000)  # 60 days default
+                token_expires_at = int(time.time()) + expires_in
+
+                # Get user profile information
+                profile_url = "https://api.linkedin.com/v2/userinfo"
+                headers = {
+                    "Authorization": f"Bearer {access_token}"
+                }
+
+                import requests
+                profile_response = requests.get(profile_url, headers=headers, timeout=10)
+                profile_response.raise_for_status()
+                profile_data = profile_response.json()
+
+                # Extract profile information
+                linkedin_id = profile_data.get("sub")  # LinkedIn user ID
+                name = profile_data.get("name")
+                email = profile_data.get("email")
+                picture = profile_data.get("picture")
+
+                # Note: Organization posting requires Community Management API access
+                # For now, save as personal account
+                # TODO: Add organization support once Community Management API is approved
+
+                # Save LinkedIn personal account
+                account = SocialAccountManager.create_account(
+                    user_id=user_id,
+                    platform=platform,
+                    platform_user_id=linkedin_id,
+                    access_token=access_token,
+                    token_expires_at=token_expires_at,
+                    account_type="user",
+                    username=name,
+                    profile_data={
+                        "name": name,
+                        "email": email,
+                        "picture": picture
+                    }
+                )
+
+                logger.info(f"LinkedIn account linked: {name}")
+
+                # Redirect back to accounts page with success
+                return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
+
+            elif platform == "tiktok":
+                # TikTok OAuth 2.0 flow
+                client_key = os.environ.get("TIKTOK_CLIENT_ID")
+                client_secret = os.environ.get("TIKTOK_CLIENT_SECRET")
+
+                api_base_url = os.environ.get('API_BASE_URL', 'https://50gms3b8y2.execute-api.us-west-2.amazonaws.com')
+                redirect_uri = f"{api_base_url}/api/social/callback"
+
+                if not client_key or not client_secret:
+                    raise ValueError("TikTok OAuth credentials not configured")
+
+                # Exchange code for tokens
+                token_data = TikTokTokenExchange.exchange_code(
+                    code=code,
+                    client_key=client_key,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri
+                )
+
+                access_token = token_data["access_token"]
+                expires_in = token_data.get("expires_in", 86400)  # 24 hours default
+                token_expires_at = int(time.time()) + expires_in
+                refresh_token = token_data.get("refresh_token")
+                open_id = token_data.get("open_id")  # TikTok user ID
+
+                # Get user profile information
+                profile_url = "https://open.tiktokapis.com/v2/user/info/"
+                headers = {
+                    "Authorization": f"Bearer {access_token}"
+                }
+                params = {
+                    "fields": "open_id,union_id,avatar_url,display_name"
+                }
+
+                import requests
+                profile_response = requests.get(profile_url, headers=headers, params=params, timeout=10)
+                profile_response.raise_for_status()
+                profile_json = profile_response.json()
+
+                # TikTok response format: {"data": {"user": {...}}}
+                user_data = profile_json.get("data", {}).get("user", {})
+                display_name = user_data.get("display_name")
+                avatar_url = user_data.get("avatar_url")
+
+                # Save TikTok account
+                account = SocialAccountManager.create_account(
+                    user_id=user_id,
+                    platform=platform,
+                    platform_user_id=open_id,
+                    access_token=access_token,
+                    refresh_token=refresh_token,
+                    token_expires_at=token_expires_at,
+                    account_type="user",
+                    username=display_name,
+                    profile_data={
+                        "display_name": display_name,
+                        "avatar_url": avatar_url,
+                        "open_id": open_id
+                    }
+                )
+
+                logger.info(f"TikTok account linked: {display_name}")
 
                 # Redirect back to accounts page with success
                 return RedirectResponse(url=f"{frontend_url}/accounts?platform={platform}&success=true")
@@ -509,6 +756,85 @@ if AUTH_ENABLED:
             logger.error(f"Error deleting account: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
+    @app.post("/api/social/linkedin/select-organization")
+    async def select_linkedin_organization(
+        request: Dict[str, Any],
+        user_id: str = Depends(get_user_id)
+    ):
+        """
+        Save selected LinkedIn organization page
+        Called after user selects which organization to post as
+        """
+        try:
+            state = request.get("state")
+            org_id = request.get("org_id")
+
+            if not state or not org_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="state and org_id are required"
+                )
+
+            # Get LinkedIn data from temporary storage
+            linkedin_data = oauth_state_manager.get_state(f"linkedin_org_select_{state}", delete_after_read=True)
+
+            if not linkedin_data:
+                raise HTTPException(
+                    status_code=404,
+                    detail="OAuth session expired. Please reconnect your LinkedIn account."
+                )
+
+            access_token = linkedin_data.get("access_token")
+            token_expires_at = linkedin_data.get("token_expires_at")
+            linkedin_id = linkedin_data.get("linkedin_id")
+            organizations = linkedin_data.get("organizations", [])
+
+            # Find the selected organization
+            selected_org = None
+            for org in organizations:
+                if org["id"] == org_id:
+                    selected_org = org
+                    break
+
+            if not selected_org:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid organization selected"
+                )
+
+            # Save LinkedIn organization account
+            account = SocialAccountManager.create_account(
+                user_id=user_id,
+                platform="linkedin",
+                platform_user_id=linkedin_id,
+                access_token=access_token,
+                token_expires_at=token_expires_at,
+                account_type="organization",
+                page_id=org_id,
+                page_name=selected_org["name"],
+                profile_data={
+                    "organization_id": org_id,
+                    "organization_name": selected_org["name"],
+                    "vanity_name": selected_org.get("vanity_name")
+                }
+            )
+
+            logger.info(f"LinkedIn organization {selected_org['name']} linked for user {user_id}")
+
+            return {
+                "message": f"Successfully connected LinkedIn organization: {selected_org['name']}",
+                "account": {
+                    "account_id": account["account_id"],
+                    "name": selected_org["name"]
+                }
+            }
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error selecting LinkedIn organization: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
     @app.post("/api/social/upload-url")
     async def get_upload_url(
         request: Dict[str, Any],
@@ -623,14 +949,14 @@ if AUTH_ENABLED:
     @app.get("/api/social/uploads")
     async def list_user_uploads(
         user_id: str = Depends(get_user_id),
-        limit: int = Query(50, ge=1, le=100),
+        limit: int = Query(5, ge=1, le=100),
         last_key: Optional[str] = Query(None)
     ):
         """
         List all upload requests for the current user
 
         Query parameters:
-        - limit: Maximum number of requests to return (1-100, default: 50)
+        - limit: Maximum number of requests to return (1-100, default: 5)
         - last_key: Pagination token from previous response
 
         Returns:
@@ -653,18 +979,10 @@ if AUTH_ENABLED:
                 last_evaluated_key=last_evaluated_key
             )
 
-            # Convert Decimal to float for JSON serialization
-            requests = []
-            for req in result['requests']:
-                # Convert timestamps
-                req_copy = dict(req)
-                if 'created_at' in req_copy:
-                    req_copy['created_at'] = int(req_copy['created_at'])
-                if 'updated_at' in req_copy:
-                    req_copy['updated_at'] = int(req_copy['updated_at'])
-                requests.append(req_copy)
+            # Convert all Decimal objects to native Python types for JSON serialization
+            result = convert_decimals(result)
 
-            response = {'requests': requests}
+            response = {'requests': result['requests']}
 
             # Add pagination token if there are more results
             if 'last_evaluated_key' in result:
@@ -704,14 +1022,8 @@ if AUTH_ENABLED:
             if upload_request.get('user_id') != user_id:
                 raise HTTPException(status_code=403, detail="Access denied")
 
-            # Convert Decimal to float for JSON serialization
-            req_copy = dict(upload_request)
-            if 'created_at' in req_copy:
-                req_copy['created_at'] = int(req_copy['created_at'])
-            if 'updated_at' in req_copy:
-                req_copy['updated_at'] = int(req_copy['updated_at'])
-
-            return req_copy
+            # Convert all Decimal objects to native Python types for JSON serialization
+            return convert_decimals(upload_request)
 
         except HTTPException:
             raise
@@ -757,7 +1069,8 @@ if AUTH_ENABLED:
             if 'error' in logs_data and logs_data['error'] == 'Request not found':
                 raise HTTPException(status_code=404, detail="Upload request not found")
 
-            return logs_data
+            # Convert all Decimal objects to native Python types for JSON serialization
+            return convert_decimals(logs_data)
 
         except HTTPException:
             raise

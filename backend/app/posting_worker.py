@@ -15,6 +15,8 @@ from botocore.exceptions import ClientError
 from instagram_posting import InstagramPostingService, InstagramPostingError
 from facebook_posting import FacebookPostingService
 from twitter_posting import TwitterPostingService, TwitterPostingError
+from linkedin_posting import LinkedInPostingService, LinkedInPostingError
+from tiktok_posting import TikTokPostingService, TikTokPostingError
 
 # Setup logging
 logger = logging.getLogger()
@@ -254,24 +256,35 @@ def process_twitter_post(
         account = response['Item']
         detailed_log.log('INFO', f'Account details retrieved: {account.get("username")}')
 
-        # Get access token
-        access_token = account.get('access_token')
+        # Get OAuth credentials
+        oauth2_access_token = account.get('access_token')  # OAuth 2.0 for tweet creation
+        oauth1_access_token_secret = account.get('refresh_token')  # Using refresh_token field to store OAuth 1.0a token secret
         twitter_user_id = account.get('platform_user_id')
 
-        if not access_token:
-            raise Exception("Missing Twitter access token")
+        if not oauth2_access_token:
+            raise Exception("Missing Twitter OAuth 2.0 access token")
+
+        # Get OAuth 1.0a credentials from environment
+        api_key = os.environ.get('TWITTER_API_KEY')
+        api_secret = os.environ.get('TWITTER_API_SECRET')
+
+        if not api_key or not api_secret:
+            raise Exception("Missing Twitter OAuth 1.0a credentials (API Key/Secret)")
 
         detailed_log.log('INFO', f'Twitter User ID: {twitter_user_id}')
         detailed_log.log('INFO', f'Video URL: {video_url}')
         detailed_log.log('INFO', f'Tweet text length: {len(caption) if caption else 0} characters')
 
-        # Post to Twitter
+        # Post to Twitter (using both OAuth 1.0a for media upload and OAuth 2.0 for tweet creation)
         detailed_log.log('INFO', 'Calling Twitter API...')
         result = TwitterPostingService.post_video(
-            access_token=access_token,
+            access_token=oauth2_access_token,
             video_url=video_url,
             text=caption,
-            user_id=twitter_user_id
+            user_id=twitter_user_id,
+            api_key=api_key,
+            api_secret=api_secret,
+            access_token_secret=oauth1_access_token_secret
         )
 
         detailed_log.log('INFO', f'Twitter API returned: {json.dumps(result)}')
@@ -284,6 +297,267 @@ def process_twitter_post(
         raise
     except Exception as e:
         detailed_log.log('ERROR', f'Twitter posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+
+
+def process_youtube_post(
+    request_id: str,
+    user_id: str,
+    account_id: str,
+    video_url: str,
+    caption: str,
+    detailed_log: 'DetailedLogger'
+):
+    """
+    Process YouTube video posting
+
+    Args:
+        request_id: Unique request ID
+        user_id: Cognito user ID
+        account_id: Account ID (format: "youtube:channel_id")
+        video_url: S3 URL to video
+        caption: Video caption/title
+        detailed_log: Detailed logger instance
+    """
+    try:
+        import time
+        from youtube_posting import YouTubePostingService, YouTubePostingError
+        from oauth_token_exchange import YouTubeTokenExchange
+
+        detailed_log.log('INFO', f'Starting YouTube post for account {account_id}')
+
+        # Get YouTube account details
+        detailed_log.log('INFO', f'Fetching YouTube account details from database')
+        detailed_log.log('INFO', f'Query key: user_id={user_id}, account_id={account_id}')
+
+        account = social_accounts_table.get_item(
+            Key={
+                'user_id': user_id,
+                'account_id': account_id
+            }
+        )
+
+        detailed_log.log('INFO', f'DynamoDB response: {account}')
+
+        if 'Item' not in account:
+            raise Exception(f"YouTube account {account_id} not found")
+
+        account_data = account['Item']
+        detailed_log.log('INFO', f'Account details retrieved: {account_data.get("username")}')
+
+        access_token = account_data['access_token']
+        refresh_token = account_data.get('refresh_token')
+        token_expires_at = account_data.get('token_expires_at')
+        channel_id = account_data['platform_user_id']
+
+        detailed_log.log('INFO', f'YouTube Channel ID: {channel_id}')
+        detailed_log.log('INFO', f'Video URL: {video_url}')
+        detailed_log.log('INFO', f'Caption length: {len(caption)} characters')
+
+        # Check if token needs refresh
+        current_time = int(time.time())
+        if token_expires_at and current_time >= token_expires_at:
+            detailed_log.log('INFO', 'Access token expired, refreshing...')
+
+            client_id = os.environ.get('YOUTUBE_CLIENT_ID')
+            # YouTube client secret is stored in SSM Parameter Store (SecureString)
+            from ssm_helper import get_youtube_client_secret
+            client_secret = get_youtube_client_secret()
+
+            if not refresh_token:
+                raise Exception("No refresh token available for YouTube account")
+
+            # Refresh the access token
+            token_data = YouTubeTokenExchange.refresh_token(
+                refresh_token=refresh_token,
+                client_id=client_id,
+                client_secret=client_secret
+            )
+
+            access_token = token_data['access_token']
+            expires_in = token_data.get('expires_in', 3600)
+            new_token_expires_at = int(time.time()) + expires_in
+
+            # Update token in database
+            social_accounts_table.update_item(
+                Key={
+                    'user_id': user_id,
+                    'account_id': account_id
+                },
+                UpdateExpression='SET access_token = :token, token_expires_at = :expires, updated_at = :updated',
+                ExpressionAttributeValues={
+                    ':token': access_token,
+                    ':expires': new_token_expires_at,
+                    ':updated': current_time
+                }
+            )
+
+            detailed_log.log('INFO', 'Access token refreshed successfully')
+
+        # Post to YouTube
+        detailed_log.log('INFO', 'Calling YouTube API...')
+        result = YouTubePostingService.post_video(
+            access_token=access_token,
+            video_url=video_url,
+            title=caption[:100] if caption else "Untitled Short",  # YouTube Shorts title limit
+            description=caption,
+            privacy_status="public"
+        )
+
+        detailed_log.log('INFO', f'YouTube API returned: {json.dumps(result)}')
+
+        return result
+
+    except YouTubePostingError as e:
+        detailed_log.log('ERROR', f'YouTube posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+    except Exception as e:
+        detailed_log.log('ERROR', f'YouTube posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+
+
+def process_linkedin_post(
+    request_id: str,
+    user_id: str,
+    account_id: str,
+    video_url: str,
+    caption: str,
+    detailed_log: 'DetailedLogger'
+):
+    """
+    Process LinkedIn video posting
+
+    Args:
+        request_id: Unique request ID
+        user_id: Cognito user ID
+        account_id: Account ID (format: "linkedin:person_id")
+        video_url: S3 URL to video
+        caption: Video caption/text
+        detailed_log: Detailed logger instance
+    """
+    try:
+        detailed_log.log('INFO', f'Starting LinkedIn post for account {account_id}')
+
+        # Get LinkedIn account details
+        detailed_log.log('INFO', f'Fetching LinkedIn account details from database')
+        detailed_log.log('INFO', f'Query key: user_id={user_id}, account_id={account_id}')
+
+        account = social_accounts_table.get_item(
+            Key={
+                'user_id': user_id,
+                'account_id': account_id
+            }
+        )
+
+        detailed_log.log('INFO', f'DynamoDB response: {account}')
+
+        if 'Item' not in account:
+            raise Exception(f"LinkedIn account {account_id} not found")
+
+        account_data = account['Item']
+        detailed_log.log('INFO', f'Account details retrieved: {account_data.get("username")}')
+
+        access_token = account_data['access_token']
+        person_id = account_data['platform_user_id']
+        person_urn = f"urn:li:person:{person_id}"
+
+        detailed_log.log('INFO', f'LinkedIn Person URN: {person_urn}')
+        detailed_log.log('INFO', f'Video URL: {video_url}')
+        detailed_log.log('INFO', f'Caption length: {len(caption)} characters')
+
+        # Post video to LinkedIn
+        detailed_log.log('INFO', 'Calling LinkedIn API...')
+        result = LinkedInPostingService.post_video(
+            person_urn=person_urn,
+            access_token=access_token,
+            video_url=video_url,
+            caption=caption
+        )
+
+        detailed_log.log('INFO', f'LinkedIn API returned: {json.dumps(result)}')
+
+        return result
+
+    except LinkedInPostingError as e:
+        detailed_log.log('ERROR', f'LinkedIn posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+    except Exception as e:
+        detailed_log.log('ERROR', f'LinkedIn posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+
+
+def process_tiktok_post(
+    request_id: str,
+    user_id: str,
+    account_id: str,
+    video_url: str,
+    caption: str,
+    detailed_log: 'DetailedLogger'
+):
+    """
+    Process TikTok video posting
+
+    Args:
+        request_id: Unique request ID
+        user_id: Cognito user ID
+        account_id: Account ID (format: "tiktok:open_id")
+        video_url: S3 URL to video
+        caption: Video caption/text
+        detailed_log: Detailed logger instance
+    """
+    try:
+        detailed_log.log('INFO', f'Starting TikTok post for account {account_id}')
+
+        # Get TikTok account details
+        detailed_log.log('INFO', f'Fetching TikTok account details from database')
+        detailed_log.log('INFO', f'Query key: user_id={user_id}, account_id={account_id}')
+
+        account = social_accounts_table.get_item(
+            Key={
+                'user_id': user_id,
+                'account_id': account_id
+            }
+        )
+
+        detailed_log.log('INFO', f'DynamoDB response: {account}')
+
+        if 'Item' not in account:
+            raise Exception(f"TikTok account {account_id} not found")
+
+        account_data = account['Item']
+        detailed_log.log('INFO', f'Account details retrieved: {account_data.get("username")}')
+
+        access_token = account_data['access_token']
+        open_id = account_data['platform_user_id']
+
+        detailed_log.log('INFO', f'TikTok Open ID: {open_id}')
+        detailed_log.log('INFO', f'Video URL: {video_url}')
+        detailed_log.log('INFO', f'Caption length: {len(caption)} characters')
+
+        # Post video to TikTok
+        detailed_log.log('INFO', 'Calling TikTok API...')
+        result = TikTokPostingService.post_video(
+            open_id=open_id,
+            access_token=access_token,
+            video_url=video_url,
+            caption=caption
+        )
+
+        detailed_log.log('INFO', f'TikTok API returned: {json.dumps(result)}')
+
+        return result
+
+    except TikTokPostingError as e:
+        detailed_log.log('ERROR', f'TikTok posting error: {str(e)}')
+        detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
+        raise
+    except Exception as e:
+        detailed_log.log('ERROR', f'TikTok posting error: {str(e)}')
         detailed_log.log('ERROR', f'Traceback: {traceback.format_exc()}')
         raise
 
@@ -335,6 +609,18 @@ def handler(event, context):
                 )
             elif platform == 'twitter':
                 result = process_twitter_post(
+                    request_id, user_id, destination, video_url, caption, detailed_log
+                )
+            elif platform == 'youtube':
+                result = process_youtube_post(
+                    request_id, user_id, destination, video_url, caption, detailed_log
+                )
+            elif platform == 'linkedin':
+                result = process_linkedin_post(
+                    request_id, user_id, destination, video_url, caption, detailed_log
+                )
+            elif platform == 'tiktok':
+                result = process_tiktok_post(
                     request_id, user_id, destination, video_url, caption, detailed_log
                 )
             else:
