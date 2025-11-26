@@ -48,6 +48,19 @@ export function Uploads() {
     loadRequests()
   }, [])
 
+  // Auto-disable refresh when all requests are completed or failed
+  useEffect(() => {
+    if (requests.length === 0) return
+
+    const allDone = requests.every(
+      req => req.status === 'completed' || req.status === 'failed'
+    )
+
+    if (allDone && autoRefresh) {
+      setAutoRefresh(false)
+    }
+  }, [requests])
+
   // Auto-refresh every 5 seconds if enabled and there are in-progress requests
   useEffect(() => {
     if (!autoRefresh) return
@@ -149,6 +162,11 @@ export function Uploads() {
     return platform.charAt(0).toUpperCase() + platform.slice(1)
   }
 
+  // Check if all requests are done (completed or failed)
+  const allRequestsDone = requests.length > 0 && requests.every(
+    req => req.status === 'completed' || req.status === 'failed'
+  )
+
   return (
     <DashboardLayout title="Upload Monitoring" subtitle="Track your posts across all platforms">
       <div className="uploads-container">
@@ -162,6 +180,7 @@ export function Uploads() {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
+                disabled={allRequestsDone}
               />
               Auto-refresh (5s)
             </label>
