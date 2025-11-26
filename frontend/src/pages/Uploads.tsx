@@ -116,6 +116,20 @@ export function Uploads() {
     }
   }
 
+  const resubmitTask = async (requestId: string, destination: string) => {
+    try {
+      await apiClient.post(`/api/social/uploads/${requestId}/resubmit`, {
+        destination: destination
+      })
+      // Reload requests to show updated status
+      await loadRequests()
+      setError(null)
+    } catch (err: any) {
+      console.error('Error resubmitting task:', err)
+      setError(err.response?.data?.detail || 'Failed to resubmit task')
+    }
+  }
+
   const copyLogsToClipboard = () => {
     if (!logsData) return
     const logsText = JSON.stringify(logsData, null, 2)
@@ -251,12 +265,22 @@ export function Uploads() {
                         <div key={dest} className="destination-item">
                           <span className="destination-name">{formatPlatform(dest)}</span>
                           <span className={getStatusBadgeClass(destData.status)}>{destData.status}</span>
-                          <button
-                            className="view-logs-button"
-                            onClick={() => loadLogs(request.request_id, dest)}
-                          >
-                            View Logs
-                          </button>
+                          <div className="destination-actions">
+                            <button
+                              className="view-logs-button"
+                              onClick={() => loadLogs(request.request_id, dest)}
+                            >
+                              View Logs
+                            </button>
+                            {destData.status === 'failed' && (
+                              <button
+                                className="resubmit-button"
+                                onClick={() => resubmitTask(request.request_id, dest)}
+                              >
+                                Resubmit
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
