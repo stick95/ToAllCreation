@@ -62,6 +62,63 @@ class DetailedLogger:
         }
 
 
+def update_parent_request_status(request_id: str):
+    """
+    Update the parent request's overall status based on destination statuses
+
+    Logic:
+    - "processing" if any destination is processing
+    - "failed" if any destination has failed
+    - "completed" if all destinations are completed
+    - "queued" if no destinations have started yet
+    """
+    try:
+        # Get current request data
+        response = upload_requests_table.get_item(Key={'request_id': request_id})
+
+        if 'Item' not in response:
+            logger.error(f"Request {request_id} not found")
+            return
+
+        request = response['Item']
+        destinations = request.get('destinations', {})
+
+        if not destinations:
+            logger.warning(f"No destinations found for request {request_id}")
+            return
+
+        # Count status types
+        statuses = [dest.get('status', 'queued') for dest in destinations.values()]
+        has_processing = 'processing' in statuses
+        has_failed = 'failed' in statuses
+        all_completed = all(s == 'completed' for s in statuses)
+
+        # Determine overall status
+        if has_processing:
+            overall_status = 'processing'
+        elif has_failed:
+            overall_status = 'failed'
+        elif all_completed:
+            overall_status = 'completed'
+        else:
+            overall_status = 'queued'
+
+        # Update parent status
+        upload_requests_table.update_item(
+            Key={'request_id': request_id},
+            UpdateExpression='SET #status = :status, updated_at = :updated_at',
+            ExpressionAttributeNames={'#status': 'status'},
+            ExpressionAttributeValues={
+                ':status': overall_status,
+                ':updated_at': datetime.utcnow().isoformat()
+            }
+        )
+        logger.info(f"Updated parent request {request_id} status to: {overall_status}")
+
+    except Exception as e:
+        logger.error(f"Failed to update parent request status: {e}")
+
+
 def update_request_status(
     request_id: str,
     destination: str,
@@ -101,6 +158,10 @@ def update_request_status(
             ExpressionAttributeValues=expr_attr_values
         )
         logger.info(f"Updated request {request_id} destination {destination} to status: {status}")
+
+        # Update parent request status based on all destinations
+        update_parent_request_status(request_id)
+
     except Exception as e:
         logger.error(f"Failed to update request status: {e}")
 
