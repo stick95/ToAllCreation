@@ -266,6 +266,7 @@
 
 .modal-content {
   background-color: var(--white);
+  color: var(--dark-text);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-2xl);
   max-width: 500px;
@@ -329,6 +330,7 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
+  background-color: var(--white);
   border: 2px solid var(--gray-200);
   border-radius: var(--radius-md);
   cursor: pointer;
