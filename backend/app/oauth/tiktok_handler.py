@@ -83,10 +83,17 @@ class TikTokOAuthHandler(OAuthHandler):
 
         data = response.json()
 
-        # Check for error in response
-        if data.get("error"):
+        # Check for actual errors (some TikTok endpoints return error.code='ok' for success)
+        if "error" in data and not isinstance(data["error"], dict):
+            # String error
             error_msg = data.get('error_description', data.get('error', 'Unknown error'))
             raise ValueError(f"TikTok OAuth error: {error_msg}")
+        elif "error" in data and isinstance(data["error"], dict):
+            # Object error - check if it's not 'ok'
+            error = data["error"]
+            if error.get("code") and error.get("code") != "ok":
+                error_msg = error.get("message") or error.get("code", "Unknown error")
+                raise ValueError(f"TikTok OAuth error: {error_msg}")
 
         # TikTok v2 API can return tokens either at root level or in "data" field
         # Check if tokens are in a "data" field or at root level
@@ -137,8 +144,17 @@ class TikTokOAuthHandler(OAuthHandler):
 
         data = response.json()
 
-        if data.get("error"):
-            raise ValueError(f"TikTok OAuth refresh error: {data.get('error_description', data.get('error'))}")
+        # Check for actual errors (some TikTok endpoints return error.code='ok' for success)
+        if "error" in data and not isinstance(data["error"], dict):
+            # String error
+            error_msg = data.get('error_description', data.get('error', 'Unknown error'))
+            raise ValueError(f"TikTok OAuth refresh error: {error_msg}")
+        elif "error" in data and isinstance(data["error"], dict):
+            # Object error - check if it's not 'ok'
+            error = data["error"]
+            if error.get("code") and error.get("code") != "ok":
+                error_msg = error.get("message") or error.get("code", "Unknown error")
+                raise ValueError(f"TikTok OAuth refresh error: {error_msg}")
 
         # TikTok v2 API can return tokens either at root level or in "data" field
         if "data" in data and isinstance(data["data"], dict) and "access_token" in data["data"]:
@@ -178,8 +194,11 @@ class TikTokOAuthHandler(OAuthHandler):
 
         data = response.json()
 
-        if data.get("error"):
-            raise ValueError(f"TikTok user info error: {data.get('error_description', data.get('error'))}")
+        # Check for actual errors (TikTok returns error.code='ok' for success)
+        error = data.get("error", {})
+        if error and error.get("code") != "ok":
+            error_msg = error.get("message") or error.get("code", "Unknown error")
+            raise ValueError(f"TikTok user info error: {error_msg}")
 
         user_data = data.get("data", {}).get("user", {})
 
