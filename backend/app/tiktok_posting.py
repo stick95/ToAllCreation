@@ -45,11 +45,11 @@ class TikTokPostingService:
 
             # Step 1: Download video from S3 first to get size
             logger.info("Step 1: Downloading video from S3")
-            video_response = requests.get(video_url, timeout=60)
+            video_response = requests.get(video_url, timeout=120)  # Increased to 2 minutes
             video_response.raise_for_status()
             video_data = video_response.content
             video_size = len(video_data)
-            logger.info(f"Downloaded {video_size} bytes")
+            logger.info(f"Downloaded {video_size} bytes ({video_size / 1024 / 1024:.2f} MB)")
 
             # Step 2: Initialize video upload with size info
             logger.info("Step 2: Initializing video upload with TikTok")
@@ -150,7 +150,7 @@ class TikTokPostingService:
 
     @staticmethod
     def _upload_video(upload_url: str, video_data: bytes):
-        """Upload video binary data to TikTok"""
+        """Upload video binary data to TikTok with retry logic"""
         video_size = len(video_data)
         headers = {
             "Content-Type": "video/mp4",
@@ -158,8 +158,33 @@ class TikTokPostingService:
             "Content-Range": f"bytes 0-{video_size-1}/{video_size}"
         }
 
-        response = requests.put(upload_url, headers=headers, data=video_data, timeout=300)
-        response.raise_for_status()
+        # Retry logic with exponential backoff for timeouts
+        max_retries = 3
+        base_timeout = 180  # Start with 3 minutes
+
+        for attempt in range(max_retries):
+            try:
+                timeout = base_timeout * (attempt + 1)  # 3min, 6min, 9min
+                logger.info(f"Upload attempt {attempt + 1}/{max_retries}, timeout: {timeout}s, size: {video_size} bytes")
+
+                response = requests.put(upload_url, headers=headers, data=video_data, timeout=timeout)
+                response.raise_for_status()
+
+                logger.info(f"Video upload successful on attempt {attempt + 1}")
+                return  # Success!
+
+            except requests.exceptions.Timeout as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # 1s, 2s, 4s
+                    logger.warning(f"Upload timeout on attempt {attempt + 1}, retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Upload failed after {max_retries} attempts")
+                    raise TikTokPostingError(f"Video upload timed out after {max_retries} attempts")
+            except requests.exceptions.RequestException as e:
+                # Don't retry on other errors (like 4xx, 5xx)
+                logger.error(f"Upload failed with non-timeout error: {e}")
+                raise
 
     @staticmethod
     def _publish_video(

@@ -255,3 +255,82 @@ def update_overall_status(request_id: str):
                 ':updated_at': int(datetime.utcnow().timestamp())
             }
         )
+
+
+def resubmit_failed_destination(request_id: str, destination: str) -> Dict[str, Any]:
+    """
+    Resubmit a failed posting task for a specific destination
+
+    Args:
+        request_id: Request ID
+        destination: Destination to resubmit (e.g., "instagram:account_id")
+
+    Returns:
+        Dict with success message
+
+    Raises:
+        ValueError: If request not found, destination not found, or not in failed state
+    """
+    # Get the upload request
+    request = get_upload_request(request_id)
+
+    if not request:
+        raise ValueError("Upload request not found")
+
+    # Verify destination exists and is failed
+    destinations = request.get('destinations', {})
+    if destination not in destinations:
+        raise ValueError("Destination not found")
+
+    dest_data = destinations[destination]
+    if dest_data.get('status') != 'failed':
+        raise ValueError("Only failed tasks can be resubmitted")
+
+    # Get video URL and caption from the request
+    video_url = request.get('video_url')
+    caption = request.get('caption', '')
+    user_id = request.get('user_id')
+
+    # Update destination status to queued
+    now = datetime.utcnow()
+    upload_requests_table.update_item(
+        Key={'request_id': request_id},
+        UpdateExpression='SET destinations.#dest.#status = :status, destinations.#dest.updated_at = :updated_at, destinations.#dest.logs = :logs REMOVE destinations.#dest.#error',
+        ExpressionAttributeNames={
+            '#dest': destination,
+            '#status': 'status',
+            '#error': 'error'
+        },
+        ExpressionAttributeValues={
+            ':status': 'queued',
+            ':updated_at': now.isoformat(),
+            ':logs': [{
+                'timestamp': now.isoformat(),
+                'level': 'INFO',
+                'message': 'Task resubmitted by user'
+            }]
+        }
+    )
+
+    # Send message to SQS queue to reprocess
+    message_body = {
+        'request_id': request_id,
+        'user_id': user_id,
+        'destination': destination,
+        'video_url': video_url,
+        'caption': caption
+    }
+
+    sqs.send_message(
+        QueueUrl=posting_queue_url,
+        MessageBody=json.dumps(message_body)
+    )
+
+    # Update overall status
+    update_overall_status(request_id)
+
+    return {
+        'message': 'Task resubmitted successfully',
+        'request_id': request_id,
+        'destination': destination
+    }

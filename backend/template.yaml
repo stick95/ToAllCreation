@@ -266,7 +266,7 @@ Resources:
     Properties:
       CodeUri: app/
       Handler: posting_worker.handler
-      Timeout: 300  # 5 minutes for video processing
+      Timeout: 600  # 10 minutes for video processing with retries
       Environment:
         Variables:
           SOCIAL_ACCOUNTS_TABLE: !Ref SocialAccountsTable

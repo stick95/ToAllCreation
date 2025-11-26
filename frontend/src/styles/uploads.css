@@ -326,20 +326,23 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border-bottom: 2px solid var(--gray-200);
+  border-radius: 8px 8px 0 0;
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #ffffff;
+  color: #1a1a1a;
+  font-weight: 600;
 }
 
 .close-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: #1e3a8a;
+  border: none;
   color: #ffffff;
-  font-size: 28px;
+  font-size: 24px;
   cursor: pointer;
   padding: 0;
   width: 36px;
@@ -354,9 +357,9 @@
 }
 
 .close-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: scale(1.05);
+  background: #1e40af;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.4);
 }
 
 .modal-body {
@@ -388,8 +391,8 @@
 }
 
 .logs-container {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   padding: 20px;
 }
@@ -397,12 +400,18 @@
 .log-meta {
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .log-meta p {
   margin: 5px 0;
   font-size: 14px;
+  color: #ffffff;
+}
+
+.log-meta strong {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .error-text {
@@ -411,11 +420,21 @@
 
 .destination-logs {
   margin-bottom: 30px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border-left: 3px solid #646cff;
 }
 
 .destination-logs h3 {
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
   color: #646cff;
+  font-size: 16px;
+}
+
+.destination-logs p {
+  color: #ffffff;
+  margin: 5px 0;
 }
 
 .log-entries {
@@ -432,8 +451,9 @@
   gap: 10px;
   padding: 8px 12px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
+  background: #1a1a1a;
   border-left: 3px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .log-info {
@@ -451,17 +471,18 @@
 }
 
 .log-timestamp {
-  color: rgba(255, 255, 255, 0.5);
+  color: #b0b0b0;
   font-size: 11px;
 }
 
 .log-level {
-  color: rgba(255, 255, 255, 0.7);
+  color: #e0e0e0;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 .log-message {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
   word-break: break-word;
 }
 

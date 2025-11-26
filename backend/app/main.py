@@ -34,7 +34,7 @@ try:
     from .facebook_posting import FacebookPostingService, FacebookPostingError
     from .instagram_posting import InstagramPostingService, InstagramPostingError
     from .s3_upload import S3UploadHelper
-    from .upload_requests import create_upload_request, get_upload_request, list_upload_requests, get_request_logs
+    from .upload_requests import create_upload_request, get_upload_request, list_upload_requests, get_request_logs, resubmit_failed_destination
     AUTH_ENABLED = True
     logger.info("✅ Authentication module loaded successfully (relative import)")
 except ImportError:
@@ -54,7 +54,7 @@ except ImportError:
         from facebook_posting import FacebookPostingService, FacebookPostingError
         from instagram_posting import InstagramPostingService, InstagramPostingError
         from s3_upload import S3UploadHelper
-        from upload_requests import create_upload_request, get_upload_request, list_upload_requests, get_request_logs
+        from upload_requests import create_upload_request, get_upload_request, list_upload_requests, get_request_logs, resubmit_failed_destination
         AUTH_ENABLED = True
         logger.info("✅ Authentication module loaded successfully (absolute import)")
     except ImportError as e:
@@ -1041,7 +1041,7 @@ if AUTH_ENABLED:
             if not destination:
                 raise HTTPException(status_code=400, detail="destination is required")
 
-            # Get the upload request
+            # Get the upload request to verify ownership
             upload_request = get_upload_request(request_id)
 
             if not upload_request:
@@ -1050,57 +1050,20 @@ if AUTH_ENABLED:
             if upload_request.get('user_id') != user_id:
                 raise HTTPException(status_code=403, detail="Access denied")
 
-            # Verify destination exists and is failed
-            destinations = upload_request.get('destinations', {})
-            if destination not in destinations:
-                raise HTTPException(status_code=404, detail="Destination not found")
-
-            dest_data = destinations[destination]
-            if dest_data.get('status') != 'failed':
-                raise HTTPException(status_code=400, detail="Only failed tasks can be resubmitted")
-
-            # Get video URL and caption from the request
-            video_url = upload_request.get('video_url')
-            caption = upload_request.get('caption', '')
-
-            # Update destination status to queued
-            upload_requests_table.update_item(
-                Key={'request_id': request_id},
-                UpdateExpression='SET destinations.#dest.#status = :status, destinations.#dest.updated_at = :updated_at, destinations.#dest.logs = :logs REMOVE destinations.#dest.#error',
-                ExpressionAttributeNames={
-                    '#dest': destination,
-                    '#status': 'status',
-                    '#error': 'error'
-                },
-                ExpressionAttributeValues={
-                    ':status': 'queued',
-                    ':updated_at': datetime.utcnow().isoformat(),
-                    ':logs': [{
-                        'timestamp': datetime.utcnow().isoformat(),
-                        'level': 'INFO',
-                        'message': 'Task resubmitted by user'
-                    }]
-                }
-            )
-
-            # Send message to SQS queue to reprocess
-            message_body = {
-                'request_id': request_id,
-                'user_id': user_id,
-                'destination': destination,
-                'video_url': video_url,
-                'caption': caption
-            }
-
-            sqs.send_message(
-                QueueUrl=posting_queue_url,
-                MessageBody=json.dumps(message_body)
-            )
+            # Use the upload_requests module function to handle resubmit
+            result = resubmit_failed_destination(request_id, destination)
 
             logger.info(f"Resubmitted task for request {request_id}, destination {destination}")
 
-            return {'message': 'Task resubmitted successfully', 'request_id': request_id, 'destination': destination}
+            return result
 
+        except ValueError as e:
+            # Convert ValueError to appropriate HTTP exceptions
+            error_msg = str(e)
+            if "not found" in error_msg.lower():
+                raise HTTPException(status_code=404, detail=error_msg)
+            else:
+                raise HTTPException(status_code=400, detail=error_msg)
         except HTTPException:
             raise
         except Exception as e:
