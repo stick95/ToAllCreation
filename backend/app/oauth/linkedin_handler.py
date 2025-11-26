@@ -47,10 +47,10 @@ class LinkedInOAuthHandler(OAuthHandler):
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
             "scope": " ".join([
-                "r_liteprofile",
-                "r_emailaddress",
-                "w_member_social",
-                "w_organization_social"
+                "openid",
+                "profile",
+                "email",
+                "w_member_social"
             ])
         }
 
@@ -130,7 +130,7 @@ class LinkedInOAuthHandler(OAuthHandler):
 
     def get_user_info(self, access_token: str) -> OAuthUserInfo:
         """
-        Get LinkedIn user profile information
+        Get LinkedIn user profile information using OpenID Connect
 
         Args:
             access_token: OAuth access token
@@ -138,35 +138,20 @@ class LinkedInOAuthHandler(OAuthHandler):
         Returns:
             OAuthUserInfo with LinkedIn user ID and profile data
         """
-        # Get basic profile info
+        # Use OpenID Connect userinfo endpoint (modern LinkedIn API)
+        userinfo_url = "https://api.linkedin.com/v2/userinfo"
         profile_response = requests.get(
-            f"{self.API_BASE}/me",
+            userinfo_url,
             headers={"Authorization": f"Bearer {access_token}"}
         )
         profile_response.raise_for_status()
         profile_data = profile_response.json()
 
-        # Get email address (separate endpoint)
-        email_response = requests.get(
-            f"{self.API_BASE}/emailAddress?q=members&projection=(elements*(handle~))",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        email_response.raise_for_status()
-        email_data = email_response.json()
-
-        email = None
-        if email_data.get("elements"):
-            email = email_data["elements"][0].get("handle~", {}).get("emailAddress")
-
-        # Extract name from localized fields
-        first_name = profile_data.get("localizedFirstName", "")
-        last_name = profile_data.get("localizedLastName", "")
-        username = f"{first_name} {last_name}".strip()
-
+        # OpenID Connect userinfo provides: sub, name, given_name, family_name, picture, email
         return OAuthUserInfo(
-            platform_user_id=profile_data["id"],
-            username=username if username else None,
-            email=email,
+            platform_user_id=profile_data.get("sub"),  # LinkedIn user ID
+            username=profile_data.get("name"),
+            email=profile_data.get("email"),
             profile_data=profile_data
         )
 
