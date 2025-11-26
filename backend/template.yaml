@@ -307,7 +307,8 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins:
-          - "*"
+          - "https://app.toallcreation.org"
+          - "http://localhost:5173"  # Vite dev server
         AllowMethods:
           - GET
           - POST
@@ -316,6 +317,7 @@ Resources:
           - OPTIONS
         AllowHeaders:
           - "*"
+        AllowCredentials: true
 
 Outputs:
   ApiUrl:

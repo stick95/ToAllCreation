@@ -1,0 +1,145 @@
+{
+  "version": "1.0.0",
+  "mode": "daa",
+  "description": "Persistent DAA configuration for ToAllCreation project",
+
+  "auto_orchestrate": true,
+
+  "agent_pool": {
+    "task_decomposer": {
+      "enabled": true,
+      "type": "coordinator",
+      "cognitive_pattern": "systems",
+      "capabilities": ["task_breakdown", "dependency_analysis", "parallel_planning"],
+      "description": "Breaks down user requests into parallelizable sub-tasks"
+    },
+    "code_analyst": {
+      "enabled": true,
+      "type": "analyst",
+      "cognitive_pattern": "critical",
+      "capabilities": ["code_analysis", "pattern_detection", "complexity_measurement", "duplication_detection"],
+      "description": "Reviews code quality, finds duplication and complexity issues"
+    },
+    "security_analyst": {
+      "enabled": true,
+      "type": "analyst",
+      "cognitive_pattern": "critical",
+      "capabilities": ["security_review", "vulnerability_detection", "authentication_analysis", "cors_review"],
+      "description": "Identifies security vulnerabilities and auth issues"
+    },
+    "architecture_researcher": {
+      "enabled": true,
+      "type": "researcher",
+      "cognitive_pattern": "divergent",
+      "capabilities": ["architecture_evaluation", "dependency_analysis", "design_patterns", "scalability_assessment"],
+      "description": "Evaluates architecture, suggests design patterns"
+    },
+    "implementation_agent": {
+      "enabled": true,
+      "type": "coder",
+      "cognitive_pattern": "convergent",
+      "capabilities": ["code_writing", "refactoring", "file_editing", "implementation"],
+      "description": "Writes and refactors code following best practices"
+    },
+    "test_agent": {
+      "enabled": true,
+      "type": "coder",
+      "cognitive_pattern": "lateral",
+      "capabilities": ["test_writing", "test_execution", "coverage_analysis"],
+      "description": "Writes comprehensive tests and validates functionality"
+    },
+    "code_reviewer": {
+      "enabled": true,
+      "type": "analyst",
+      "cognitive_pattern": "critical",
+      "capabilities": ["code_review", "self_validation", "quality_check"],
+      "description": "Reviews agent work before presenting to user"
+    },
+    "coordinator": {
+      "enabled": true,
+      "type": "coordinator",
+      "cognitive_pattern": "adaptive",
+      "capabilities": ["task_coordination", "report_generation", "recommendation_synthesis", "agent_orchestration"],
+      "description": "Coordinates all agents and synthesizes results"
+    }
+  },
+
+  "execution": {
+    "max_parallel_agents": 4,
+    "self_review_enabled": true,
+    "min_confidence_threshold": 0.8,
+    "enable_knowledge_sharing": true,
+    "enable_autonomous_learning": true
+  },
+
+  "decision_protocol": {
+    "ask_user_when": {
+      "multiple_valid_approaches": true,
+      "architecture_not_obvious": true,
+      "security_tradeoffs": true,
+      "performance_vs_simplicity": true,
+      "significant_cost_impact": true,
+      "breaking_changes": true,
+      "requires_user_preference": true
+    },
+    "auto_decide_when": {
+      "single_obvious_solution": true,
+      "follows_existing_patterns": true,
+      "pure_refactoring": true,
+      "test_implementation": true,
+      "documentation_updates": true
+    },
+    "presentation": {
+      "show_all_options": true,
+      "explain_tradeoffs": true,
+      "recommend_if_confident": false,
+      "max_options": 4,
+      "include_cost_estimates": true,
+      "include_implementation_time": true
+    }
+  },
+
+  "monitoring": {
+    "live_stream": true,
+    "show_agent_activity": true,
+    "show_file_reads": true,
+    "show_findings_realtime": true,
+    "show_agent_communication": true,
+    "show_progress_indicators": true,
+    "show_performance_metrics": true,
+    "verbosity": "detailed",
+    "update_interval_seconds": 2
+  },
+
+  "learning": {
+    "enabled": true,
+    "adapt_to_codebase_patterns": true,
+    "learn_user_preferences": true,
+    "share_knowledge_between_agents": true,
+    "persist_learnings": true
+  },
+
+  "project_context": {
+    "name": "ToAllCreation",
+    "type": "social_media_management_platform",
+    "tech_stack": {
+      "frontend": "React 19 + TypeScript + Vite",
+      "backend": "Python FastAPI on AWS Lambda",
+      "infrastructure": "AWS (Lambda, DynamoDB, S3, SQS, Cognito, API Gateway)",
+      "deployment": "GitHub Actions + SAM"
+    },
+    "key_patterns": {
+      "state_management": "Zustand",
+      "api_client": "Axios with interceptors",
+      "styling": "CSS Modules with design system variables",
+      "authentication": "AWS Cognito",
+      "async_processing": "SQS queues"
+    },
+    "priorities": [
+      "Clean, simple architecture",
+      "Security (OAuth tokens, CORS, encryption)",
+      "Maintainability over premature optimization",
+      "Follow existing patterns unless refactoring"
+    ]
+  }
+}
