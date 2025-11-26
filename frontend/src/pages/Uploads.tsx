@@ -123,6 +123,8 @@ export function Uploads() {
       })
       // Reload requests to show updated status
       await loadRequests()
+      // Re-enable auto-refresh since we now have an in-progress task
+      setAutoRefresh(true)
       setError(null)
     } catch (err: any) {
       console.error('Error resubmitting task:', err)
