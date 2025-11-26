@@ -8,6 +8,14 @@ import { DashboardLayout } from '../components/DashboardLayout'
 import apiClient from '../lib/apiClient'
 import '../styles/accounts.css'
 
+// Import platform icons
+import facebookIcon from '../assets/icons/facebook.svg'
+import instagramIcon from '../assets/icons/instagram.svg'
+import twitterIcon from '../assets/icons/twitter.svg'
+import youtubeIcon from '../assets/icons/youtube.svg'
+import linkedinIcon from '../assets/icons/linkedin.svg'
+import tiktokIcon from '../assets/icons/tiktok.svg'
+
 interface SocialAccount {
   account_id: string
   platform: string
@@ -29,37 +37,37 @@ const PLATFORMS = [
   {
     id: 'facebook',
     name: 'Facebook',
-    icon: '📘',
+    icon: facebookIcon,
     description: 'Connect to post to Pages you manage'
   },
   {
     id: 'instagram',
     name: 'Instagram',
-    icon: '📷',
+    icon: instagramIcon,
     description: 'Connect Business accounts linked to your Facebook Pages'
   },
   {
     id: 'twitter',
     name: 'X (Twitter)',
-    icon: '🐦',
+    icon: twitterIcon,
     description: 'Post to your personal account'
   },
   {
     id: 'youtube',
     name: 'YouTube',
-    icon: '📹',
+    icon: youtubeIcon,
     description: 'Upload videos as YouTube Shorts'
   },
   {
     id: 'linkedin',
     name: 'LinkedIn',
-    icon: '💼',
+    icon: linkedinIcon,
     description: 'Post to your profile or Company Pages you manage'
   },
   {
     id: 'tiktok',
     name: 'TikTok',
-    icon: '🎵',
+    icon: tiktokIcon,
     description: 'Upload short videos to your TikTok account'
   }
 ]
@@ -224,7 +232,7 @@ export function Accounts() {
           return (
             <div key={platform.id} className="account-card">
               <div className="account-card-header">
-                <span className="account-icon">{platform.icon}</span>
+                <img src={platform.icon} alt={platform.name} className="account-icon" />
                 <h3>{platform.name}</h3>
               </div>
 
