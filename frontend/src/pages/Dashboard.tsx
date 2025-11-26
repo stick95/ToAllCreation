@@ -119,7 +119,7 @@ export function Dashboard() {
       }
 
       // Step 3: Create async upload request
-      const response = await apiClient.post('/api/social/post', {
+      await apiClient.post('/api/social/post', {
         s3_key: s3_key,
         caption: caption,
         account_ids: selectedAccounts

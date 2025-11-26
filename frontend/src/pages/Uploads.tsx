@@ -39,8 +39,6 @@ export function Uploads() {
   const [requests, setRequests] = useState<UploadRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedRequest, setSelectedRequest] = useState<UploadRequest | null>(null)
-  const [selectedDestination, setSelectedDestination] = useState<string | null>(null)
   const [showLogsModal, setShowLogsModal] = useState(false)
   const [logsData, setLogsData] = useState<any>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -83,8 +81,8 @@ export function Uploads() {
 
   const loadRequestDetails = async (requestId: string) => {
     try {
-      const response = await apiClient.get(`/api/social/uploads/${requestId}`)
-      setSelectedRequest(response.data)
+      await apiClient.get(`/api/social/uploads/${requestId}`)
+      // Details loaded but not currently used in UI
     } catch (err: any) {
       console.error('Error loading request details:', err)
       setError(err.response?.data?.detail || 'Failed to load request details')
@@ -205,7 +203,6 @@ export function Uploads() {
                       className="view-details-button"
                       onClick={() => {
                         loadRequestDetails(request.request_id)
-                        setSelectedDestination(null)
                       }}
                     >
                       View Details
