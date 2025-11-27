@@ -44,6 +44,9 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                 <Link to="/uploads" className="menu-item">
                   Upload History
                 </Link>
+                <Link to="/scheduled" className="menu-item">
+                  Scheduled Posts
+                </Link>
                 <button onClick={() => signOut()} className="menu-item">
                   Sign Out
                 </button>

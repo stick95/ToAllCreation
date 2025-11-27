@@ -75,6 +75,39 @@ Resources:
         AttributeName: ttl
         Enabled: true  # Auto-delete old requests after 90 days
 
+  # DynamoDB Table for Scheduled Posts
+  ScheduledPostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: toallcreation-scheduled-posts
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: scheduled_post_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: scheduled_time
+          AttributeType: N
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: scheduled_post_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: scheduled_time-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: scheduled_time
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true  # Auto-delete old posts after 90 days
+
   # SQS Queue for Async Social Media Posting
   PostingQueue:
     Type: AWS::SQS::Queue
@@ -199,6 +232,7 @@ Resources:
           SOCIAL_ACCOUNTS_TABLE: !Ref SocialAccountsTable
           OAUTH_STATE_TABLE: !Ref OAuthStateTable
           UPLOAD_REQUESTS_TABLE: !Ref UploadRequestsTable
+          SCHEDULED_POSTS_TABLE: !Ref ScheduledPostsTable
           VIDEO_UPLOAD_BUCKET: !Ref VideoUploadBucket
           POSTING_QUEUE_URL: !Ref PostingQueue
           # URLs for OAuth redirects (from SSM Parameter Store)
@@ -223,6 +257,8 @@ Resources:
             TableName: !Ref OAuthStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref UploadRequestsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ScheduledPostsTable
         - S3CrudPolicy:
             BucketName: !Ref VideoUploadBucket
         - SQSSendMessagePolicy:
@@ -301,6 +337,33 @@ Resources:
           Properties:
             Queue: !GetAtt PostingQueue.Arn
             BatchSize: 1  # Process one message at a time for better error tracking
+
+  # Scheduler Processor Lambda (triggered by EventBridge)
+  SchedulerProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: scheduler_processor.handler
+      Timeout: 60  # 1 minute
+      Environment:
+        Variables:
+          SCHEDULED_POSTS_TABLE: !Ref ScheduledPostsTable
+          UPLOAD_REQUESTS_TABLE: !Ref UploadRequestsTable
+          POSTING_QUEUE_URL: !Ref PostingQueue
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ScheduledPostsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UploadRequestsTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt PostingQueue.QueueName
+      Events:
+        ScheduleTrigger:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
+            Description: Check for scheduled posts every minute
+            Enabled: true
 
   HttpApi:
     Type: AWS::Serverless::HttpApi

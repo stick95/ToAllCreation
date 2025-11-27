@@ -30,6 +30,11 @@ export function Dashboard() {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
   const [videoPreview, setVideoPreview] = useState<string | null>(null)
 
+  // Scheduling state
+  const [isScheduled, setIsScheduled] = useState(false)
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledTime, setScheduledTime] = useState('')
+
   // Load connected accounts
   useEffect(() => {
     loadAccounts()
@@ -41,6 +46,15 @@ export function Dashboard() {
       setSelectedAccounts(accounts.map(account => account.account_id))
     }
   }, [accounts])
+
+  // Cleanup video preview URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview)
+      }
+    }
+  }, [videoPreview])
 
   const loadAccounts = async () => {
     try {
@@ -111,6 +125,29 @@ export function Dashboard() {
       return
     }
 
+    // Validate scheduling if enabled
+    if (isScheduled) {
+      if (!scheduledDate || !scheduledTime) {
+        setError('Please select both date and time for scheduled post')
+        return
+      }
+
+      // Convert to Unix timestamp and validate it's at least 1 hour in the future
+      const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`)
+      const now = new Date()
+      const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000))
+
+      if (scheduledDateTime <= now) {
+        setError('Scheduled time must be in the future')
+        return
+      }
+
+      if (scheduledDateTime < oneHourFromNow) {
+        setError('Posts must be scheduled at least 1 hour in advance. For immediate posting, uncheck "Schedule Post"')
+        return
+      }
+    }
+
     try {
       setPosting(true)
       setError(null)
@@ -137,15 +174,37 @@ export function Dashboard() {
         throw new Error(`S3 upload failed: ${uploadResponse.statusText}`)
       }
 
-      // Step 3: Create async upload request
-      await apiClient.post('/api/social/post', {
-        s3_key: s3_key,
-        caption: caption,
-        account_ids: selectedAccounts
-      })
+      // Step 3: Create scheduled post or immediate post
+      if (isScheduled) {
+        // Calculate Unix timestamp for scheduled time
+        const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`)
+        const scheduledTimestamp = Math.floor(scheduledDateTime.getTime() / 1000)
 
-      // Redirect to uploads page to see status
-      navigate('/uploads')
+        // Get the video URL from S3
+        const videoUrl = `https://toallcreation-video-uploads.s3.amazonaws.com/${s3_key}`
+
+        // Create scheduled post
+        await apiClient.post('/api/scheduled-posts', {
+          video_url: videoUrl,
+          caption: caption,
+          destinations: selectedAccounts,
+          scheduled_time: scheduledTimestamp,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        })
+
+        // Redirect to scheduled posts page to see the scheduled post
+        navigate('/scheduled')
+      } else {
+        // Create immediate upload request
+        await apiClient.post('/api/social/post', {
+          s3_key: s3_key,
+          caption: caption,
+          account_ids: selectedAccounts
+        })
+
+        // Redirect to uploads page to see status
+        navigate('/uploads')
+      }
 
     } catch (err: any) {
       console.error('Error posting:', err)
@@ -188,6 +247,9 @@ export function Dashboard() {
                 <button
                   className="btn-remove-video"
                   onClick={() => {
+                    if (videoPreview) {
+                      URL.revokeObjectURL(videoPreview)
+                    }
                     setVideoFile(null)
                     setVideoPreview(null)
                   }}
@@ -273,6 +335,68 @@ export function Dashboard() {
           )}
         </div>
 
+        {/* Scheduling Section */}
+        <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid var(--gray-300, #e5e7eb)' }} />
+        <div className="composer-section">
+          <label className="account-checkbox">
+            <input
+              type="checkbox"
+              checked={isScheduled}
+              onChange={(e) => setIsScheduled(e.target.checked)}
+            />
+            <div className="account-info">
+              <span className="account-platform" style={{ fontWeight: 'bold' }}>Schedule Post</span>
+              <span className="account-name">Post at a specific date and time</span>
+            </div>
+          </label>
+
+          {isScheduled && (
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1', minWidth: '200px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--gray-700)' }}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="caption-input"
+                  style={{ padding: '0.75rem' }}
+                  required={isScheduled}
+                />
+              </div>
+              <div style={{ flex: '1', minWidth: '200px' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--gray-700)' }}>
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="caption-input"
+                  style={{ padding: '0.75rem' }}
+                  required={isScheduled}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scheduling Info */}
+        {isScheduled && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            marginTop: '1rem',
+            backgroundColor: 'var(--blue-50, #eff6ff)',
+            border: '1px solid var(--blue-200, #bfdbfe)',
+            borderRadius: '8px',
+            color: 'var(--blue-700, #1d4ed8)',
+            fontSize: '0.875rem'
+          }}>
+            Posts must be scheduled at least 1 hour in advance. For immediate posting, uncheck "Schedule Post".
+          </div>
+        )}
+
         {/* Post Button */}
         <div className="composer-actions">
           <button
@@ -280,7 +404,13 @@ export function Dashboard() {
             onClick={handlePost}
             disabled={posting || !videoFile || selectedAccounts.length === 0}
           >
-            {posting ? 'Posting...' : `Post to ${selectedAccounts.length} Account${selectedAccounts.length !== 1 ? 's' : ''}`}
+            {posting
+              ? (isScheduled ? 'Scheduling...' : 'Posting...')
+              : (isScheduled
+                  ? `Schedule for ${selectedAccounts.length} Account${selectedAccounts.length !== 1 ? 's' : ''}`
+                  : `Post to ${selectedAccounts.length} Account${selectedAccounts.length !== 1 ? 's' : ''}`
+                )
+            }
           </button>
         </div>
       </div>

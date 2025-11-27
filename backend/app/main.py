@@ -35,6 +35,10 @@ try:
     from .instagram_posting import InstagramPostingService, InstagramPostingError
     from .s3_upload import S3UploadHelper
     from .upload_requests import create_upload_request, get_upload_request, list_upload_requests, get_request_logs, resubmit_failed_destination
+    from .scheduled_posts_manager import (
+        create_scheduled_post, get_scheduled_post, list_scheduled_posts,
+        update_scheduled_post, cancel_scheduled_post
+    )
     AUTH_ENABLED = True
     logger.info("✅ Authentication module loaded successfully (relative import)")
 except ImportError:
@@ -55,6 +59,10 @@ except ImportError:
         from instagram_posting import InstagramPostingService, InstagramPostingError
         from s3_upload import S3UploadHelper
         from upload_requests import create_upload_request, get_upload_request, list_upload_requests, get_request_logs, resubmit_failed_destination
+        from scheduled_posts_manager import (
+            create_scheduled_post, get_scheduled_post, list_scheduled_posts,
+            update_scheduled_post, cancel_scheduled_post
+        )
         AUTH_ENABLED = True
         logger.info("✅ Authentication module loaded successfully (absolute import)")
     except ImportError as e:
@@ -1068,6 +1076,240 @@ if AUTH_ENABLED:
             raise
         except Exception as e:
             logger.error(f"Error resubmitting task: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # ============================================
+    # SCHEDULED POSTS ENDPOINTS
+    # ============================================
+
+    @app.post("/api/scheduled-posts")
+    async def create_scheduled_post_endpoint(
+        request: Dict[str, Any],
+        user_id: str = Depends(get_user_id)
+    ):
+        """
+        Create a new scheduled post
+
+        Request body:
+        - video_url: S3 URL of the video
+        - caption: Post caption
+        - destinations: List of destination identifiers
+        - scheduled_time: Unix timestamp when to post
+        - timezone: (optional) User's timezone
+
+        Returns:
+        - Scheduled post details
+        """
+        try:
+            video_url = request.get('video_url')
+            caption = request.get('caption', '')
+            destinations = request.get('destinations', [])
+            scheduled_time = request.get('scheduled_time')
+            timezone = request.get('timezone', 'UTC')
+
+            if not video_url:
+                raise HTTPException(status_code=400, detail="video_url is required")
+            if not destinations:
+                raise HTTPException(status_code=400, detail="destinations is required")
+            if not scheduled_time:
+                raise HTTPException(status_code=400, detail="scheduled_time is required")
+
+            # Validate scheduled_time is at least 1 hour in the future
+            now = int(datetime.utcnow().timestamp())
+            one_hour_from_now = now + (60 * 60)  # 1 hour in seconds
+
+            if scheduled_time <= now:
+                raise HTTPException(status_code=400, detail="Scheduled time must be in the future")
+
+            if scheduled_time < one_hour_from_now:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Posts must be scheduled at least 1 hour in advance. Use immediate posting for sooner times."
+                )
+
+            scheduled_post = create_scheduled_post(
+                user_id=user_id,
+                video_url=video_url,
+                caption=caption,
+                destinations=destinations,
+                scheduled_time=scheduled_time,
+                timezone=timezone
+            )
+
+            logger.info(f"Created scheduled post {scheduled_post['scheduled_post_id']} for user {user_id}")
+
+            return convert_decimals(scheduled_post)
+
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Error creating scheduled post: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/scheduled-posts")
+    async def list_scheduled_posts_endpoint(
+        limit: int = Query(50, ge=1, le=100),
+        last_key: Optional[str] = Query(None),
+        user_id: str = Depends(get_user_id)
+    ):
+        """
+        List scheduled posts for the current user
+
+        Query params:
+        - limit: Maximum number of posts to return (1-100)
+        - last_key: Pagination token
+
+        Returns:
+        - posts: List of scheduled posts
+        - last_evaluated_key: (optional) Pagination token for next page
+        """
+        try:
+            # Parse last_evaluated_key if provided
+            last_evaluated_key = None
+            if last_key:
+                import base64
+                last_evaluated_key = json.loads(base64.b64decode(last_key))
+
+            result = list_scheduled_posts(
+                user_id=user_id,
+                limit=limit,
+                last_evaluated_key=last_evaluated_key
+            )
+
+            # Encode last_evaluated_key for next request
+            if 'last_evaluated_key' in result:
+                result['last_evaluated_key'] = base64.b64encode(
+                    json.dumps(result['last_evaluated_key']).encode()
+                ).decode()
+
+            return convert_decimals(result)
+
+        except Exception as e:
+            logger.error(f"Error listing scheduled posts: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/scheduled-posts/{scheduled_post_id}")
+    async def get_scheduled_post_endpoint(
+        scheduled_post_id: str,
+        user_id: str = Depends(get_user_id)
+    ):
+        """
+        Get a specific scheduled post
+
+        Returns:
+        - Scheduled post details
+        """
+        try:
+            scheduled_post = get_scheduled_post(user_id, scheduled_post_id)
+
+            if not scheduled_post:
+                raise HTTPException(status_code=404, detail="Scheduled post not found")
+
+            return convert_decimals(scheduled_post)
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting scheduled post: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.put("/api/scheduled-posts/{scheduled_post_id}")
+    async def update_scheduled_post_endpoint(
+        scheduled_post_id: str,
+        request: Dict[str, Any],
+        user_id: str = Depends(get_user_id)
+    ):
+        """
+        Update a scheduled post
+
+        Request body:
+        - scheduled_time: (optional) New scheduled time
+        - caption: (optional) New caption
+        - destinations: (optional) New destinations list
+        - timezone: (optional) New timezone
+
+        Returns:
+        - Updated scheduled post
+        """
+        try:
+            # Verify the post exists and belongs to the user
+            existing_post = get_scheduled_post(user_id, scheduled_post_id)
+            if not existing_post:
+                raise HTTPException(status_code=404, detail="Scheduled post not found")
+
+            # Only allow updates to posts that are still scheduled
+            if existing_post.get('status') != 'scheduled':
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot update post with status '{existing_post.get('status')}'"
+                )
+
+            # Extract updates from request
+            updates = {}
+            if 'scheduled_time' in request:
+                updates['scheduled_time'] = request['scheduled_time']
+            if 'caption' in request:
+                updates['caption'] = request['caption']
+            if 'destinations' in request:
+                updates['destinations'] = request['destinations']
+            if 'timezone' in request:
+                updates['timezone'] = request['timezone']
+
+            if not updates:
+                raise HTTPException(status_code=400, detail="No updates provided")
+
+            updated_post = update_scheduled_post(
+                user_id=user_id,
+                scheduled_post_id=scheduled_post_id,
+                updates=updates
+            )
+
+            logger.info(f"Updated scheduled post {scheduled_post_id} for user {user_id}")
+
+            return convert_decimals(updated_post)
+
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating scheduled post: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/scheduled-posts/{scheduled_post_id}")
+    async def cancel_scheduled_post_endpoint(
+        scheduled_post_id: str,
+        user_id: str = Depends(get_user_id)
+    ):
+        """
+        Cancel a scheduled post
+
+        Returns:
+        - Updated scheduled post with cancelled status
+        """
+        try:
+            # Verify the post exists and belongs to the user
+            existing_post = get_scheduled_post(user_id, scheduled_post_id)
+            if not existing_post:
+                raise HTTPException(status_code=404, detail="Scheduled post not found")
+
+            # Only allow cancellation of posts that are still scheduled
+            if existing_post.get('status') != 'scheduled':
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot cancel post with status '{existing_post.get('status')}'"
+                )
+
+            cancelled_post = cancel_scheduled_post(user_id, scheduled_post_id)
+
+            logger.info(f"Cancelled scheduled post {scheduled_post_id} for user {user_id}")
+
+            return convert_decimals(cancelled_post)
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error cancelling scheduled post: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
 # Lambda handler

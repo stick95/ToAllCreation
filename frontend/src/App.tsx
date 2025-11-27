@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { Accounts } from './pages/Accounts'
 import { Dashboard } from './pages/Dashboard'
 import { Uploads } from './pages/Uploads'
+import { ScheduledPosts } from './pages/ScheduledPosts'
 import { Privacy } from './pages/Privacy'
 import { Terms } from './pages/Terms'
 import logo from './assets/img/taclogo.png'
@@ -74,6 +75,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Uploads />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scheduled"
+          element={
+            <ProtectedRoute>
+              <ScheduledPosts />
             </ProtectedRoute>
           }
         />
