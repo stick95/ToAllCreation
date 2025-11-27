@@ -245,7 +245,6 @@ export function Accounts() {
                     {connectedAccounts.map(account => (
                       <div key={account.account_id} className="connected-account-item">
                         <div className="account-info">
-                          <span className="status-badge status-connected">✓</span>
                           <span className="account-name">
                             {account.page_name || account.username || 'Personal Account'}
                           </span>

@@ -42,6 +42,7 @@ export function Uploads() {
   const [showLogsModal, setShowLogsModal] = useState(false)
   const [logsData, setLogsData] = useState<any>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
 
   // Load upload requests
   useEffect(() => {
@@ -153,6 +154,18 @@ export function Uploads() {
     URL.revokeObjectURL(url)
   }
 
+  const toggleVideoExpanded = (requestId: string) => {
+    setExpandedVideos(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(requestId)) {
+        newSet.delete(requestId)
+      } else {
+        newSet.add(requestId)
+      }
+      return newSet
+    })
+  }
+
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'completed':
@@ -234,23 +247,35 @@ export function Uploads() {
                       <span className="upload-timestamp">{formatTimestamp(request.created_at)}</span>
                       <span className={getStatusBadgeClass(request.status)}>{request.status}</span>
                     </div>
-                    <button
-                      className="view-details-button"
-                      onClick={() => {
-                        loadRequestDetails(request.request_id)
-                      }}
-                    >
-                      View Details
-                    </button>
                   </div>
 
                   <div className="upload-card-body">
-                    {/* Video Thumbnail/Link */}
+                    {/* Video Player/Link */}
                     <div className="video-info">
-                      <a href={request.video_url} target="_blank" rel="noopener noreferrer" className="video-link">
-                        View Video
-                      </a>
+                      <button
+                        onClick={() => toggleVideoExpanded(request.request_id)}
+                        className="video-link"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--blue-600, #2563eb)',
+                          cursor: 'pointer',
+                          padding: 0,
+                          font: 'inherit'
+                        }}
+                      >
+                        {expandedVideos.has(request.request_id) ? 'Hide Video' : 'View Video'}
+                      </button>
                     </div>
+                    {expandedVideos.has(request.request_id) && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <video
+                          src={request.video_url}
+                          controls
+                          style={{ width: '100%', maxHeight: '300px', borderRadius: '8px' }}
+                        />
+                      </div>
+                    )}
 
                     {/* Caption Preview */}
                     {request.caption && (

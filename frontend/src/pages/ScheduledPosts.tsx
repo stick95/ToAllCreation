@@ -29,6 +29,7 @@ export function ScheduledPosts() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
 
   // Load scheduled posts
   useEffect(() => {
@@ -122,6 +123,18 @@ export function ScheduledPosts() {
     }
   }, [])
 
+  const toggleVideoExpanded = useCallback((postId: string) => {
+    setExpandedVideos(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(postId)) {
+        newSet.delete(postId)
+      } else {
+        newSet.add(postId)
+      }
+      return newSet
+    })
+  }, [])
+
   // Filter to only show scheduled and processing posts (limit to next 8)
   const activePosts = posts
     .filter(p => p.status === 'scheduled' || p.status === 'processing')
@@ -174,19 +187,33 @@ export function ScheduledPosts() {
                     {getTimeUntil(post.scheduled_time)} • {post.destinations.length} destination{post.destinations.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <span className={`status-badge ${getStatusColor(post.status)}`}>
-                  {post.status}
-                </span>
               </div>
 
               <div className="upload-body">
-                <div className="upload-video-preview">
-                  <video
-                    src={post.video_url}
-                    controls
-                    style={{ width: '100%', maxHeight: '300px', borderRadius: '8px' }}
-                  />
+                <div className="upload-video-preview" style={{ marginBottom: '1rem' }}>
+                  <button
+                    onClick={() => toggleVideoExpanded(post.scheduled_post_id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--blue-600, #2563eb)',
+                      cursor: 'pointer',
+                      padding: 0,
+                      font: 'inherit'
+                    }}
+                  >
+                    {expandedVideos.has(post.scheduled_post_id) ? 'Hide Video' : 'View Video'}
+                  </button>
                 </div>
+                {expandedVideos.has(post.scheduled_post_id) && (
+                  <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                    <video
+                      src={post.video_url}
+                      controls
+                      style={{ width: '100%', maxHeight: '300px', borderRadius: '8px' }}
+                    />
+                  </div>
+                )}
 
                 {post.caption && (
                   <div className="upload-caption">
