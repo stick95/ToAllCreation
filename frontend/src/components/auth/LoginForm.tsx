@@ -3,12 +3,14 @@
  */
 import { useState, type FormEvent } from 'react'
 import { useAuthStore } from '../../stores/authStore'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import logo from '../../assets/img/taclogo.png'
 
 export function LoginForm() {
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [successMessage] = useState(location.state?.message || null)
   const { signIn, isLoading, error, clearError } = useAuthStore()
   const navigate = useNavigate()
 
@@ -31,6 +33,12 @@ export function LoginForm() {
         <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
         <h2>Sign In</h2>
         <p className="subtitle">Go into all the world and preach the gospel to all creation.</p>
+
+        {successMessage && (
+          <div className="alert alert-success">
+            {successMessage}
+          </div>
+        )}
 
         {error && (
           <div className="error-message">

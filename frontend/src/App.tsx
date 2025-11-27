@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
+import { ForgotPasswordForm } from './components/auth/ForgotPasswordForm'
+import { ResetPasswordForm } from './components/auth/ResetPasswordForm'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { Accounts } from './pages/Accounts'
 import { Dashboard } from './pages/Dashboard'
@@ -54,6 +56,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegisterForm />} />
+        <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+        <Route path="/reset-password" element={<ResetPasswordForm />} />
         <Route
           path="/dashboard"
           element={

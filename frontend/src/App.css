@@ -87,7 +87,43 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-footer {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
+.form-footer a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.form-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Link styling for auth forms */
+.auth-form .link-secondary {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+}
+
+.auth-form .link-secondary:hover {
+  text-decoration: underline;
+}
+
+/* Button spacing in auth forms */
+.auth-form .btn-primary {
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 /* Button groups */
