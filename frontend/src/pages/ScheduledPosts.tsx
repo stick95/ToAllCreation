@@ -3,7 +3,6 @@
  * View and manage scheduled social media posts
  */
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import { DashboardLayout } from '../components/DashboardLayout'
 import apiClient from '../lib/apiClient'
 import { getPlatformIcon } from '../utils/platformIcons'
@@ -28,7 +27,7 @@ export function ScheduledPosts() {
   const [posts, setPosts] = useState<ScheduledPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [autoRefresh] = useState(true)
   const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
 
   // Load scheduled posts
@@ -104,22 +103,6 @@ export function ScheduledPosts() {
       return `in ${hours}h ${minutes}m`
     } else {
       return `in ${minutes}m`
-    }
-  }, [])
-
-  const getStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return 'status-queued'
-      case 'processing':
-        return 'status-processing'
-      case 'posted':
-        return 'status-completed'
-      case 'cancelled':
-      case 'failed':
-        return 'status-failed'
-      default:
-        return 'status-queued'
     }
   }, [])
 

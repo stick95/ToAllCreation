@@ -93,16 +93,6 @@ export function Uploads() {
     }
   }
 
-  const loadRequestDetails = async (requestId: string) => {
-    try {
-      await apiClient.get(`/api/social/uploads/${requestId}`)
-      // Details loaded but not currently used in UI
-    } catch (err: any) {
-      console.error('Error loading request details:', err)
-      setError(err.response?.data?.detail || 'Failed to load request details')
-    }
-  }
-
   const loadLogs = async (requestId: string, destination?: string) => {
     try {
       const url = destination
