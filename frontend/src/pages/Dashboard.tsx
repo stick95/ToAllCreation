@@ -385,26 +385,20 @@ export function Dashboard() {
                 const isTikTokSelected = selectedAccounts.includes(account.account_id) && isTikTok
 
                 return (
-                  <div
-                    key={account.account_id}
-                    style={isTikTok ? {
-                      padding: 'var(--spacing-md)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--gray-300)',
-                      backgroundColor: 'white'
-                    } : {}}
-                  >
-                    <label className="account-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={selectedAccounts.includes(account.account_id)}
-                        onChange={() => toggleAccountSelection(account.account_id)}
-                      />
-                      <div className="account-info">
-                        <span className="account-platform">{account.platform}</span>
-                        <span className="account-name">
-                          {account.page_name || account.username || 'Personal Account'}
-                        </span>
+                  <div key={account.account_id}>
+                    <label className="account-checkbox" style={isTikTok ? { flexDirection: 'column', alignItems: 'stretch' } : {}}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedAccounts.includes(account.account_id)}
+                          onChange={() => toggleAccountSelection(account.account_id)}
+                        />
+                        <div className="account-info">
+                          <span className="account-platform">{account.platform}</span>
+                          <span className="account-name">
+                            {account.page_name || account.username || 'Personal Account'}
+                          </span>
+                        </div>
                       </div>
 
                       {/* TikTok Settings - shown when TikTok account is selected */}
