@@ -385,14 +385,7 @@ export function Dashboard() {
                 const isTikTokSelected = selectedAccounts.includes(account.account_id) && isTikTok
 
                 return (
-                  <div
-                    key={account.account_id}
-                    style={isTikTok ? {
-                      padding: 'var(--spacing-md)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid white'
-                    } : {}}
-                  >
+                  <div key={account.account_id}>
                     <label className="account-checkbox">
                       <input
                         type="checkbox"
@@ -410,12 +403,9 @@ export function Dashboard() {
                     {/* TikTok Settings - shown when TikTok account is selected */}
                     {isTikTokSelected && (
                       <div style={{
-                        marginTop: '1rem',
-                        fontSize: '0.875rem',
-                        padding: 'var(--spacing-md)',
-                        backgroundColor: 'var(--gray-50)',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--gray-200)'
+                        marginTop: '0.5rem',
+                        marginLeft: '2rem',
+                        fontSize: '0.875rem'
                       }}>
                         {/* Privacy Level */}
                         <div style={{ marginBottom: '0.75rem' }}>
