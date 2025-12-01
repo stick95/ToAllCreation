@@ -470,7 +470,7 @@ export function Dashboard() {
                                 if (!e.target.checked) setTiktokCommercialType('')
                               }}
                             />
-                            <span style={{ fontWeight: '600' }}>Commercial</span>
+                            <span style={{ fontWeight: '600' }}>Commercial Content</span>
                           </label>
 
                           {tiktokCommercialContent && (
@@ -497,13 +497,8 @@ export function Dashboard() {
                           )}
                         </div>
 
-                        {/* Legal Agreement - Compact */}
-                        <div style={{
-                          padding: '0.5rem',
-                          backgroundColor: 'var(--gray-50)',
-                          borderRadius: '6px',
-                          fontSize: '0.75rem'
-                        }}>
+                        {/* Legal Agreement - Aligned with checkboxes */}
+                        <div style={{ fontSize: '0.75rem' }}>
                           <label style={{ display: 'flex', alignItems: 'start', gap: '0.25rem', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
