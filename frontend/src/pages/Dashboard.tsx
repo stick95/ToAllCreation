@@ -402,7 +402,15 @@ export function Dashboard() {
 
                     {/* TikTok Settings - shown when TikTok account is selected */}
                     {isTikTokSelected && (
-                      <div style={{ marginTop: '1rem', marginLeft: '2rem', fontSize: '0.875rem' }}>
+                      <div style={{
+                        marginTop: '1rem',
+                        marginLeft: '2rem',
+                        fontSize: '0.875rem',
+                        padding: 'var(--spacing-md)',
+                        backgroundColor: 'var(--gray-50)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--gray-200)'
+                      }}>
                         {/* Privacy Level */}
                         <div style={{ marginBottom: '0.75rem' }}>
                           <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '600' }}>
