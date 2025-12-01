@@ -20,9 +20,9 @@ from linkedin_posting import LinkedInPostingService, LinkedInPostingError
 from tiktok_posting import TikTokPostingService, TikTokPostingError
 
 # Import OAuth handlers for token refresh
-from oauth.tiktok_handler import TikTokHandler
-from oauth.linkedin_handler import LinkedInHandler
-from oauth.facebook_handler import FacebookHandler
+from oauth.tiktok_handler import TikTokOAuthHandler
+from oauth.linkedin_handler import LinkedInOAuthHandler
+from oauth.facebook_handler import FacebookOAuthHandler
 
 # Setup logging
 logger = logging.getLogger()
@@ -213,7 +213,7 @@ def process_instagram_post(
             detailed_log.log('INFO', f'Access token expired or expiring soon (expires at {token_expires_at}, current {current_time})')
             detailed_log.log('INFO', 'Refreshing Instagram/Facebook access token...')
             try:
-                facebook_handler = FacebookHandler()
+                facebook_handler = FacebookOAuthHandler()
                 new_tokens = facebook_handler.refresh_access_token(access_token)
 
                 # Update token in database
@@ -307,7 +307,7 @@ def process_facebook_post(
             detailed_log.log('INFO', f'Access token expired or expiring soon (expires at {token_expires_at}, current {current_time})')
             detailed_log.log('INFO', 'Refreshing Facebook access token...')
             try:
-                facebook_handler = FacebookHandler()
+                facebook_handler = FacebookOAuthHandler()
                 new_tokens = facebook_handler.refresh_access_token(access_token)
 
                 # Update token in database
@@ -600,7 +600,7 @@ def process_linkedin_post(
             if refresh_token:
                 detailed_log.log('INFO', 'Refreshing LinkedIn access token...')
                 try:
-                    linkedin_handler = LinkedInHandler()
+                    linkedin_handler = LinkedInOAuthHandler()
                     new_tokens = linkedin_handler.refresh_access_token(refresh_token)
 
                     # Update token in database
@@ -706,7 +706,7 @@ def process_tiktok_post(
             if refresh_token:
                 detailed_log.log('INFO', 'Refreshing TikTok access token...')
                 try:
-                    tiktok_handler = TikTokHandler()
+                    tiktok_handler = TikTokOAuthHandler()
                     new_tokens = tiktok_handler.refresh_access_token(refresh_token)
 
                     # Update token in database
