@@ -499,12 +499,11 @@ export function Dashboard() {
 
                         {/* Legal Agreement - Aligned with checkboxes */}
                         <div style={{ fontSize: '0.75rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'start', gap: '0.25rem', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={tiktokAgreement}
                               onChange={(e) => setTiktokAgreement(e.target.checked)}
-                              style={{ marginTop: '2px' }}
                             />
                             <span>
                               Agree to{' '}
