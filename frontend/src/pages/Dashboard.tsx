@@ -406,10 +406,9 @@ export function Dashboard() {
                           {account.page_name || account.username || 'Personal Account'}
                         </span>
                       </div>
-                    </label>
 
-                    {/* TikTok Settings - shown when TikTok account is selected */}
-                    {isTikTokSelected && (
+                      {/* TikTok Settings - shown when TikTok account is selected */}
+                      {isTikTokSelected && (
                       <div style={{
                         marginTop: '0.75rem',
                         fontSize: '0.875rem',
@@ -546,7 +545,8 @@ export function Dashboard() {
                           </label>
                         </div>
                       </div>
-                    )}
+                      )}
+                    </label>
                   </div>
                 )
               })}
