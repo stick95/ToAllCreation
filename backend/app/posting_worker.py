@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import traceback
+import time
 from datetime import datetime
 from typing import Dict, Any, List
 import boto3
@@ -17,6 +18,9 @@ from facebook_posting import FacebookPostingService
 from twitter_posting import TwitterPostingService, TwitterPostingError
 from linkedin_posting import LinkedInPostingService, LinkedInPostingError
 from tiktok_posting import TikTokPostingService, TikTokPostingError
+
+# Import OAuth handlers for token refresh
+from oauth.tiktok_handler import TikTokHandler
 
 # Setup logging
 logger = logging.getLogger()
@@ -594,7 +598,41 @@ def process_tiktok_post(
         detailed_log.log('INFO', f'Account details retrieved: {account_data.get("username")}')
 
         access_token = account_data['access_token']
+        refresh_token = account_data.get('refresh_token')
+        token_expires_at = int(account_data.get('token_expires_at', 0))
         open_id = account_data['platform_user_id']
+
+        # Check if token is expired or about to expire (within 5 minutes)
+        current_time = int(time.time())
+        if token_expires_at and current_time >= (token_expires_at - 300):
+            detailed_log.log('INFO', f'Access token expired or expiring soon (expires at {token_expires_at}, current {current_time})')
+            if refresh_token:
+                detailed_log.log('INFO', 'Refreshing TikTok access token...')
+                try:
+                    tiktok_handler = TikTokHandler()
+                    new_tokens = tiktok_handler.refresh_access_token(refresh_token)
+
+                    # Update token in database
+                    new_expires_at = int(time.time()) + new_tokens.expires_in
+                    social_accounts_table.update_item(
+                        Key={
+                            'user_id': user_id,
+                            'account_id': account_id
+                        },
+                        UpdateExpression='SET access_token = :token, refresh_token = :refresh, token_expires_at = :expires',
+                        ExpressionAttributeValues={
+                            ':token': new_tokens.access_token,
+                            ':refresh': new_tokens.refresh_token,
+                            ':expires': new_expires_at
+                        }
+                    )
+                    access_token = new_tokens.access_token
+                    detailed_log.log('INFO', f'Token refreshed successfully. New expiration: {new_expires_at}')
+                except Exception as e:
+                    detailed_log.log('ERROR', f'Failed to refresh token: {str(e)}')
+                    raise Exception(f"Failed to refresh TikTok token: {str(e)}")
+            else:
+                raise Exception("Access token expired and no refresh token available")
 
         detailed_log.log('INFO', f'TikTok Open ID: {open_id}')
         detailed_log.log('INFO', f'Video URL: {video_url}')
