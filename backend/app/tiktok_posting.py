@@ -128,7 +128,7 @@ class TikTokPostingService:
         payload = {
             "post_info": {
                 "title": caption[:150] if caption else "Video",  # Title max 150 chars for TikTok
-                "privacy_level": "PUBLIC_TO_EVERYONE",  # Production setting - posts are public
+                "privacy_level": "SELF_ONLY",  # SELF_ONLY for unaudited apps - change to PUBLIC_TO_EVERYONE after TikTok app approval
                 "disable_duet": False,
                 "disable_comment": False,
                 "disable_stitch": False,
