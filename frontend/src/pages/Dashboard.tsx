@@ -387,19 +387,37 @@ export function Dashboard() {
                 return (
                   <div key={account.account_id}>
                     <label className="account-checkbox" style={isTikTok ? { flexDirection: 'column', alignItems: 'stretch' } : {}}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedAccounts.includes(account.account_id)}
-                          onChange={() => toggleAccountSelection(account.account_id)}
-                        />
-                        <div className="account-info">
-                          <span className="account-platform">{account.platform}</span>
-                          <span className="account-name">
-                            {account.page_name || account.username || 'Personal Account'}
-                          </span>
-                        </div>
-                      </div>
+                      {isTikTok ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedAccounts.includes(account.account_id)}
+                              onChange={() => toggleAccountSelection(account.account_id)}
+                            />
+                            <div className="account-info">
+                              <span className="account-platform">{account.platform}</span>
+                              <span className="account-name">
+                                {account.page_name || account.username || 'Personal Account'}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <input
+                            type="checkbox"
+                            checked={selectedAccounts.includes(account.account_id)}
+                            onChange={() => toggleAccountSelection(account.account_id)}
+                          />
+                          <div className="account-info">
+                            <span className="account-platform">{account.platform}</span>
+                            <span className="account-name">
+                              {account.page_name || account.username || 'Personal Account'}
+                            </span>
+                          </div>
+                        </>
+                      )}
 
                       {/* TikTok Settings - shown when TikTok account is selected */}
                       {isTikTokSelected && (
