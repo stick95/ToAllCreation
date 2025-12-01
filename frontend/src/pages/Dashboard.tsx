@@ -35,6 +35,15 @@ export function Dashboard() {
   const [scheduledDate, setScheduledDate] = useState('')
   const [scheduledTime, setScheduledTime] = useState('')
 
+  // TikTok-specific settings
+  const [tiktokPrivacy, setTiktokPrivacy] = useState('')  // No default value per TikTok requirements
+  const [tiktokAllowComments, setTiktokAllowComments] = useState(true)
+  const [tiktokAllowDuet, setTiktokAllowDuet] = useState(false)
+  const [tiktokAllowStitch, setTiktokAllowStitch] = useState(false)
+  const [tiktokCommercialContent, setTiktokCommercialContent] = useState(false)
+  const [tiktokCommercialType, setTiktokCommercialType] = useState('')  // 'your_brand' or 'branded_content'
+  const [tiktokAgreement, setTiktokAgreement] = useState(false)
+
   // Load connected accounts
   useEffect(() => {
     loadAccounts()
@@ -114,6 +123,12 @@ export function Dashboard() {
 
   const allSelected = accounts.length > 0 && selectedAccounts.length === accounts.length
 
+  // Check if TikTok account is selected
+  const hasTikTokSelected = selectedAccounts.some(accountId => {
+    const account = accounts.find(acc => acc.account_id === accountId)
+    return account?.platform.toLowerCase() === 'tiktok'
+  })
+
   const handlePost = async () => {
     if (!videoFile) {
       setError('Please select a video to post')
@@ -123,6 +138,27 @@ export function Dashboard() {
     if (selectedAccounts.length === 0) {
       setError('Please select at least one account to post to')
       return
+    }
+
+    // Validate TikTok-specific requirements
+    if (hasTikTokSelected) {
+      if (!tiktokPrivacy) {
+        setError('Please select a privacy level for TikTok')
+        return
+      }
+      if (!tiktokAgreement) {
+        setError('Please agree to TikTok\'s Music Usage Confirmation')
+        return
+      }
+      if (tiktokCommercialContent && !tiktokCommercialType) {
+        setError('Please select commercial content type for TikTok')
+        return
+      }
+      // Disable private option if branded content is selected
+      if (tiktokCommercialType === 'branded_content' && tiktokPrivacy === 'PRIVATE_TO_SELF') {
+        setError('Branded content visibility cannot be set to private on TikTok')
+        return
+      }
     }
 
     // Validate scheduling if enabled
@@ -184,23 +220,51 @@ export function Dashboard() {
         const videoUrl = `https://toallcreation-video-uploads.s3.amazonaws.com/${s3_key}`
 
         // Create scheduled post
-        await apiClient.post('/api/scheduled-posts', {
+        const scheduledPostData: any = {
           video_url: videoUrl,
           caption: caption,
           destinations: selectedAccounts,
           scheduled_time: scheduledTimestamp,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        })
+        }
+
+        // Add TikTok settings if TikTok is selected
+        if (hasTikTokSelected) {
+          scheduledPostData.tiktok_settings = {
+            privacy_level: tiktokPrivacy,
+            disable_comment: !tiktokAllowComments,
+            disable_duet: !tiktokAllowDuet,
+            disable_stitch: !tiktokAllowStitch,
+            commercial_content: tiktokCommercialContent,
+            commercial_type: tiktokCommercialType || undefined
+          }
+        }
+
+        await apiClient.post('/api/scheduled-posts', scheduledPostData)
 
         // Redirect to scheduled posts page to see the scheduled post
         navigate('/scheduled')
       } else {
         // Create immediate upload request
-        await apiClient.post('/api/social/post', {
+        const postData: any = {
           s3_key: s3_key,
           caption: caption,
           account_ids: selectedAccounts
-        })
+        }
+
+        // Add TikTok settings if TikTok is selected
+        if (hasTikTokSelected) {
+          postData.tiktok_settings = {
+            privacy_level: tiktokPrivacy,
+            disable_comment: !tiktokAllowComments,
+            disable_duet: !tiktokAllowDuet,
+            disable_stitch: !tiktokAllowStitch,
+            commercial_content: tiktokCommercialContent,
+            commercial_type: tiktokCommercialType || undefined
+          }
+        }
+
+        await apiClient.post('/api/social/post', postData)
 
         // Redirect to uploads page to see status
         navigate('/uploads')
@@ -334,6 +398,161 @@ export function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* TikTok Settings Section */}
+        {hasTikTokSelected && (
+          <>
+            <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid var(--gray-300, #e5e7eb)' }} />
+            <div className="composer-section">
+              <h3>TikTok Settings</h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>
+                Required settings for TikTok posting
+              </p>
+
+              {/* Privacy Level */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--gray-700)' }}>
+                  Privacy Level <span style={{ color: 'red' }}>*</span>
+                </label>
+                <select
+                  value={tiktokPrivacy}
+                  onChange={(e) => setTiktokPrivacy(e.target.value)}
+                  className="caption-input"
+                  style={{ padding: '0.75rem', cursor: 'pointer' }}
+                  required={hasTikTokSelected}
+                >
+                  <option value="">Select privacy level...</option>
+                  <option value="PUBLIC_TO_EVERYONE">Public</option>
+                  <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option>
+                  <option
+                    value="SELF_ONLY"
+                    disabled={tiktokCommercialType === 'branded_content'}
+                  >
+                    Private {tiktokCommercialType === 'branded_content' ? '(not available for branded content)' : ''}
+                  </option>
+                </select>
+              </div>
+
+              {/* Interaction Settings */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: 'var(--gray-700)' }}>
+                  Interaction Settings
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label className="account-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={tiktokAllowComments}
+                      onChange={(e) => setTiktokAllowComments(e.target.checked)}
+                    />
+                    <span className="account-name">Allow Comments</span>
+                  </label>
+                  <label className="account-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={tiktokAllowDuet}
+                      onChange={(e) => setTiktokAllowDuet(e.target.checked)}
+                    />
+                    <span className="account-name">Allow Duet</span>
+                  </label>
+                  <label className="account-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={tiktokAllowStitch}
+                      onChange={(e) => setTiktokAllowStitch(e.target.checked)}
+                    />
+                    <span className="account-name">Allow Stitch</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Commercial Content */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="account-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={tiktokCommercialContent}
+                    onChange={(e) => {
+                      setTiktokCommercialContent(e.target.checked)
+                      if (!e.target.checked) setTiktokCommercialType('')
+                    }}
+                  />
+                  <div className="account-info">
+                    <span className="account-platform" style={{ fontWeight: '600' }}>Commercial Content</span>
+                    <span className="account-name">This content promotes myself or a brand</span>
+                  </div>
+                </label>
+
+                {tiktokCommercialContent && (
+                  <div style={{ marginTop: '0.75rem', marginLeft: '2rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                      Content Type <span style={{ color: 'red' }}>*</span>
+                    </label>
+                    <select
+                      value={tiktokCommercialType}
+                      onChange={(e) => {
+                        setTiktokCommercialType(e.target.value)
+                        // Auto-disable private if branded content is selected
+                        if (e.target.value === 'branded_content' && tiktokPrivacy === 'SELF_ONLY') {
+                          setTiktokPrivacy('')
+                        }
+                      }}
+                      className="caption-input"
+                      style={{ padding: '0.75rem', cursor: 'pointer' }}
+                      required={tiktokCommercialContent}
+                    >
+                      <option value="">Select content type...</option>
+                      <option value="your_brand">Your Brand (Promotional content)</option>
+                      <option value="branded_content">Branded Content (Paid partnership)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Legal Agreement */}
+              <div style={{
+                marginTop: '1.5rem',
+                padding: '1rem',
+                backgroundColor: 'var(--gray-50, #f9fafb)',
+                borderRadius: '8px'
+              }}>
+                <label className="account-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={tiktokAgreement}
+                    onChange={(e) => setTiktokAgreement(e.target.checked)}
+                    required={hasTikTokSelected}
+                  />
+                  <div className="account-info">
+                    <span className="account-name" style={{ fontSize: '0.875rem' }}>
+                      By posting, you agree to TikTok's{' '}
+                      <a
+                        href="https://www.tiktok.com/legal/music-usage-confirmation"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--blue-600)', textDecoration: 'underline' }}
+                      >
+                        Music Usage Confirmation
+                      </a>
+                      {tiktokCommercialType === 'branded_content' && (
+                        <> and{' '}
+                          <a
+                            href="https://www.tiktok.com/legal/page/row/bc-policy/en"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--blue-600)', textDecoration: 'underline' }}
+                          >
+                            Branded Content Policy
+                          </a>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Scheduling Section */}
         <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid var(--gray-300, #e5e7eb)' }} />
