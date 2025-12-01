@@ -21,6 +21,8 @@ from tiktok_posting import TikTokPostingService, TikTokPostingError
 
 # Import OAuth handlers for token refresh
 from oauth.tiktok_handler import TikTokHandler
+from oauth.linkedin_handler import LinkedInHandler
+from oauth.facebook_handler import FacebookHandler
 
 # Setup logging
 logger = logging.getLogger()
@@ -200,9 +202,39 @@ def process_instagram_post(
         # Get Instagram account ID and access token
         instagram_account_id = account.get('instagram_account_id')
         access_token = account.get('access_token')
+        token_expires_at = int(account.get('token_expires_at', 0))
 
         if not instagram_account_id or not access_token:
             raise Exception("Missing Instagram account ID or access token")
+
+        # Check if token is expired or expiring soon (within 7 days for Meta tokens)
+        current_time = int(time.time())
+        if token_expires_at and current_time >= (token_expires_at - 604800):  # 7 days = 604800 seconds
+            detailed_log.log('INFO', f'Access token expired or expiring soon (expires at {token_expires_at}, current {current_time})')
+            detailed_log.log('INFO', 'Refreshing Instagram/Facebook access token...')
+            try:
+                facebook_handler = FacebookHandler()
+                new_tokens = facebook_handler.refresh_access_token(access_token)
+
+                # Update token in database
+                new_expires_at = int(time.time()) + new_tokens.expires_in
+                social_accounts_table.update_item(
+                    Key={
+                        'user_id': user_id,
+                        'account_id': account_id
+                    },
+                    UpdateExpression='SET access_token = :token, token_expires_at = :expires, updated_at = :updated',
+                    ExpressionAttributeValues={
+                        ':token': new_tokens.access_token,
+                        ':expires': new_expires_at,
+                        ':updated': int(time.time())
+                    }
+                )
+                access_token = new_tokens.access_token
+                detailed_log.log('INFO', f'Token refreshed successfully. New expiration: {new_expires_at}')
+            except Exception as e:
+                detailed_log.log('ERROR', f'Failed to refresh token: {str(e)}')
+                raise Exception(f"Failed to refresh Instagram/Facebook token: {str(e)}")
 
         detailed_log.log('INFO', f'Instagram Business Account ID: {instagram_account_id}')
         detailed_log.log('INFO', f'Video URL: {video_url}')
@@ -264,9 +296,39 @@ def process_facebook_post(
         # Get Page ID and access token
         page_id = account.get('page_id')
         access_token = account.get('access_token')
+        token_expires_at = int(account.get('token_expires_at', 0))
 
         if not page_id or not access_token:
             raise Exception("Missing Facebook page ID or access token")
+
+        # Check if token is expired or expiring soon (within 7 days for Meta tokens)
+        current_time = int(time.time())
+        if token_expires_at and current_time >= (token_expires_at - 604800):  # 7 days = 604800 seconds
+            detailed_log.log('INFO', f'Access token expired or expiring soon (expires at {token_expires_at}, current {current_time})')
+            detailed_log.log('INFO', 'Refreshing Facebook access token...')
+            try:
+                facebook_handler = FacebookHandler()
+                new_tokens = facebook_handler.refresh_access_token(access_token)
+
+                # Update token in database
+                new_expires_at = int(time.time()) + new_tokens.expires_in
+                social_accounts_table.update_item(
+                    Key={
+                        'user_id': user_id,
+                        'account_id': account_id
+                    },
+                    UpdateExpression='SET access_token = :token, token_expires_at = :expires, updated_at = :updated',
+                    ExpressionAttributeValues={
+                        ':token': new_tokens.access_token,
+                        ':expires': new_expires_at,
+                        ':updated': int(time.time())
+                    }
+                )
+                access_token = new_tokens.access_token
+                detailed_log.log('INFO', f'Token refreshed successfully. New expiration: {new_expires_at}')
+            except Exception as e:
+                detailed_log.log('ERROR', f'Failed to refresh token: {str(e)}')
+                raise Exception(f"Failed to refresh Facebook token: {str(e)}")
 
         detailed_log.log('INFO', f'Facebook Page ID: {page_id}')
         detailed_log.log('INFO', f'Video URL: {video_url}')
@@ -526,8 +588,43 @@ def process_linkedin_post(
         detailed_log.log('INFO', f'Account details retrieved: {account_data.get("username")}')
 
         access_token = account_data['access_token']
+        refresh_token = account_data.get('refresh_token')
+        token_expires_at = int(account_data.get('token_expires_at', 0))
         person_id = account_data['platform_user_id']
         person_urn = f"urn:li:person:{person_id}"
+
+        # Check if token is expired or expiring soon (within 7 days for LinkedIn tokens)
+        current_time = int(time.time())
+        if token_expires_at and current_time >= (token_expires_at - 604800):  # 7 days = 604800 seconds
+            detailed_log.log('INFO', f'Access token expired or expiring soon (expires at {token_expires_at}, current {current_time})')
+            if refresh_token:
+                detailed_log.log('INFO', 'Refreshing LinkedIn access token...')
+                try:
+                    linkedin_handler = LinkedInHandler()
+                    new_tokens = linkedin_handler.refresh_access_token(refresh_token)
+
+                    # Update token in database
+                    new_expires_at = int(time.time()) + new_tokens.expires_in
+                    social_accounts_table.update_item(
+                        Key={
+                            'user_id': user_id,
+                            'account_id': account_id
+                        },
+                        UpdateExpression='SET access_token = :token, refresh_token = :refresh, token_expires_at = :expires, updated_at = :updated',
+                        ExpressionAttributeValues={
+                            ':token': new_tokens.access_token,
+                            ':refresh': new_tokens.refresh_token,
+                            ':expires': new_expires_at,
+                            ':updated': int(time.time())
+                        }
+                    )
+                    access_token = new_tokens.access_token
+                    detailed_log.log('INFO', f'Token refreshed successfully. New expiration: {new_expires_at}')
+                except Exception as e:
+                    detailed_log.log('ERROR', f'Failed to refresh token: {str(e)}')
+                    raise Exception(f"Failed to refresh LinkedIn token: {str(e)}")
+            else:
+                raise Exception("Access token expired and no refresh token available")
 
         detailed_log.log('INFO', f'LinkedIn Person URN: {person_urn}')
         detailed_log.log('INFO', f'Video URL: {video_url}')
