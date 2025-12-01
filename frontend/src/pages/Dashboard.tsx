@@ -498,8 +498,8 @@ export function Dashboard() {
                         </div>
 
                         {/* Legal Agreement - Aligned with checkboxes */}
-                        <div style={{ fontSize: '0.75rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                        <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                             <input
                               type="checkbox"
                               checked={tiktokAgreement}
