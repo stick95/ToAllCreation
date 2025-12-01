@@ -385,7 +385,15 @@ export function Dashboard() {
                 const isTikTokSelected = selectedAccounts.includes(account.account_id) && isTikTok
 
                 return (
-                  <div key={account.account_id}>
+                  <div
+                    key={account.account_id}
+                    style={isTikTok ? {
+                      padding: 'var(--spacing-md)',
+                      backgroundColor: 'var(--gray-50)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--gray-200)'
+                    } : {}}
+                  >
                     <label className="account-checkbox">
                       <input
                         type="checkbox"
@@ -404,12 +412,7 @@ export function Dashboard() {
                     {isTikTokSelected && (
                       <div style={{
                         marginTop: '1rem',
-                        marginLeft: '2rem',
-                        fontSize: '0.875rem',
-                        padding: 'var(--spacing-md)',
-                        backgroundColor: 'var(--gray-50)',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--gray-200)'
+                        fontSize: '0.875rem'
                       }}>
                         {/* Privacy Level */}
                         <div style={{ marginBottom: '0.75rem' }}>
