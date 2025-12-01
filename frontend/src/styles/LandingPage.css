@@ -1,0 +1,509 @@
+/* Landing Page Styles */
+
+.landing-page {
+  min-height: 100vh;
+  background-color: #FFFFFF;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ==================== Header ==================== */
+.landing-header {
+  background-color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 1rem 0;
+}
+
+.landing-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-logo {
+  height: 40px;
+  width: auto;
+}
+
+.nav-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-link {
+  padding: 0.5rem 1rem;
+  color: #4a4a4a;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: #2563eb;
+}
+
+.nav-link-primary {
+  padding: 0.5rem 1.5rem;
+  background-color: #2563eb;
+  color: #FFFFFF;
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.nav-link-primary:hover {
+  background-color: #1d4ed8;
+}
+
+/* ==================== Hero Section ==================== */
+.hero-section {
+  padding: 80px 0 100px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.hero-content {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-logo {
+  height: 200px;
+  margin-bottom: 2rem;
+  animation: fadeIn 0.8s ease-in;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.hero-verse {
+  font-size: 1.25rem;
+  color: #4a4a4a;
+  font-style: italic;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.verse-reference {
+  font-size: 1rem;
+  font-style: normal;
+  color: #6b7280;
+}
+
+.hero-description {
+  font-size: 1.25rem;
+  color: #4a4a4a;
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-hero-primary,
+.btn-hero-secondary {
+  padding: 1rem 2.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.btn-hero-primary {
+  background-color: #2563eb;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-hero-primary:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.btn-hero-secondary {
+  background-color: #FFFFFF;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+}
+
+.btn-hero-secondary:hover {
+  background-color: #f0f9ff;
+}
+
+/* ==================== Features Section ==================== */
+.features-section {
+  padding: 100px 0;
+  background-color: #FFFFFF;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.section-subtitle {
+  font-size: 1.25rem;
+  color: #6b7280;
+  text-align: center;
+  margin-top: -2rem;
+  margin-bottom: 3rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2.5rem;
+}
+
+.feature-card {
+  padding: 2rem;
+  background-color: #f9fafb;
+  border-radius: 16px;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.feature-card p {
+  font-size: 1rem;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+/* ==================== Platforms Section ==================== */
+.platforms-section {
+  padding: 80px 0;
+  background-color: #f9fafb;
+}
+
+.platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.platform-badge {
+  padding: 1.5rem 2rem;
+  background-color: #FFFFFF;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: #1a1a1a;
+  transition: all 0.2s ease;
+}
+
+.platform-badge:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: scale(1.05);
+}
+
+/* ==================== CTA Section ==================== */
+.cta-section {
+  padding: 100px 0;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #FFFFFF;
+}
+
+.cta-content {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.cta-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.cta-description {
+  font-size: 1.25rem;
+  margin-bottom: 2.5rem;
+  opacity: 0.95;
+}
+
+.btn-cta {
+  padding: 1rem 2.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  background-color: #FFFFFF;
+  color: #2563eb;
+  border-radius: 12px;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== Footer ==================== */
+.landing-footer {
+  padding: 60px 0 30px;
+  background-color: #1a1a1a;
+  color: #FFFFFF;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  margin-bottom: 3rem;
+}
+
+.footer-brand {
+  max-width: 400px;
+}
+
+.footer-logo {
+  height: 60px;
+  margin-bottom: 1rem;
+}
+
+.footer-tagline {
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+.footer-links {
+  display: flex;
+  gap: 4rem;
+}
+
+.footer-section h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.footer-section a {
+  display: block;
+  color: #9ca3af;
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+  transition: color 0.2s ease;
+}
+
+.footer-section a:hover {
+  color: #FFFFFF;
+}
+
+.footer-bottom {
+  padding-top: 2rem;
+  border-top: 1px solid #374151;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.footer-bottom p {
+  margin-bottom: 0.5rem;
+}
+
+.footer-verse {
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+/* ==================== Animations ==================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== Responsive Design ==================== */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .hero-logo {
+    height: 150px;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-verse {
+    font-size: 1.125rem;
+  }
+
+  .hero-description {
+    font-size: 1.125rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .footer-links {
+    gap: 2rem;
+  }
+
+  .nav-title {
+    display: none;
+  }
+
+  .platforms-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .hero-section {
+    padding: 60px 0 80px;
+  }
+
+  .hero-logo {
+    height: 120px;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-verse {
+    font-size: 1rem;
+  }
+
+  .hero-description {
+    font-size: 1rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .nav-links {
+    gap: 0.5rem;
+  }
+
+  .nav-link {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .nav-link-primary {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+  }
+
+  .cta-title {
+    font-size: 1.75rem;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .platforms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-badge {
+    padding: 1rem;
+  }
+}
+
+/* Small desktop and large tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding: 0 40px;
+  }
+
+  .hero-title {
+    font-size: 3rem;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

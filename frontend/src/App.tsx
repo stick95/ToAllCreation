@@ -1,20 +1,20 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
 import { ForgotPasswordForm } from './components/auth/ForgotPasswordForm'
 import { ResetPasswordForm } from './components/auth/ResetPasswordForm'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { LandingPage } from './pages/LandingPage'
 import { Accounts } from './pages/Accounts'
 import { Dashboard } from './pages/Dashboard'
 import { Uploads } from './pages/Uploads'
 import { ScheduledPosts } from './pages/ScheduledPosts'
 import { Privacy } from './pages/Privacy'
 import { Terms } from './pages/Terms'
-import logo from './assets/img/taclogo.png'
 import './App.css'
 
-// Public home page
+// Home route - redirect authenticated users to dashboard, otherwise show landing page
 function Home() {
   const { isAuthenticated } = useAuthStore()
 
@@ -22,31 +22,7 @@ function Home() {
     return <Navigate to="/dashboard" replace />
   }
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} alt="ToAllCreation Logo" className="App-logo" />
-        <p>He said to them, “Go into all the world and preach the gospel to all creation."</p>
-
-        <div className="card">
-          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
-            <Link to="/login">
-              <button>Sign In</button>
-            </Link>
-            <Link to="/register">
-              <button>Sign Up</button>
-            </Link>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '40px', fontSize: '14px', opacity: 0.7 }}>
-          <p>Frontend: React + Vite + TypeScript</p>
-          <p>Backend: FastAPI + AWS Lambda + SAM</p>
-          <p>Auth: AWS Cognito</p>
-        </div>
-      </header>
-    </div>
-  )
+  return <LandingPage />
 }
 
 function App() {
@@ -90,22 +66,8 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/privacy"
-          element={
-            <ProtectedRoute>
-              <Privacy />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <ProtectedRoute>
-              <Terms />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
       </Routes>
     </BrowserRouter>
   )
