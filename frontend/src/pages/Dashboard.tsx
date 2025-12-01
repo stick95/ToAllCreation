@@ -385,12 +385,7 @@ export function Dashboard() {
                 const isTikTokSelected = selectedAccounts.includes(account.account_id) && isTikTok
 
                 return (
-                  <div key={account.account_id} style={{
-                    border: isTikTok ? '1px solid var(--gray-300, #e5e7eb)' : 'none',
-                    borderRadius: isTikTok ? '8px' : '0',
-                    padding: isTikTok ? '0.75rem' : '0',
-                    marginBottom: isTikTok ? '0.5rem' : '0'
-                  }}>
+                  <div key={account.account_id}>
                     <label className="account-checkbox">
                       <input
                         type="checkbox"
@@ -464,9 +459,9 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        {/* Commercial Content - Condensed */}
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                        {/* Commercial Content - Row Layout */}
+                        <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                             <input
                               type="checkbox"
                               checked={tiktokCommercialContent}
@@ -475,7 +470,7 @@ export function Dashboard() {
                                 if (!e.target.checked) setTiktokCommercialType('')
                               }}
                             />
-                            <span style={{ fontWeight: '600' }}>Commercial Content</span>
+                            <span style={{ fontWeight: '600' }}>Commercial</span>
                           </label>
 
                           {tiktokCommercialContent && (
@@ -488,7 +483,7 @@ export function Dashboard() {
                                 }
                               }}
                               style={{
-                                width: '100%',
+                                flex: 1,
                                 padding: '0.5rem',
                                 border: '1px solid var(--gray-300)',
                                 borderRadius: '6px',
