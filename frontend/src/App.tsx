@@ -7,19 +7,19 @@ import { ResetPasswordForm } from './components/auth/ResetPasswordForm'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { LandingPage } from './pages/LandingPage'
 import { Accounts } from './pages/Accounts'
-import { Dashboard } from './pages/Dashboard'
+import { CreateReel } from './pages/CreateReel'
 import { Uploads } from './pages/Uploads'
 import { ScheduledPosts } from './pages/ScheduledPosts'
 import { Privacy } from './pages/Privacy'
 import { Terms } from './pages/Terms'
 import './App.css'
 
-// Home route - redirect authenticated users to dashboard, otherwise show landing page
+// Home route - redirect authenticated users to create-reel, otherwise show landing page
 function Home() {
   const { isAuthenticated } = useAuthStore()
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/create-reel" replace />
   }
 
   return <LandingPage />
@@ -35,10 +35,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordForm />} />
         <Route path="/reset-password" element={<ResetPasswordForm />} />
         <Route
-          path="/dashboard"
+          path="/create-reel"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <CreateReel />
             </ProtectedRoute>
           }
         />

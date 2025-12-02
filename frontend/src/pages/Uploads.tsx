@@ -221,7 +221,7 @@ export function Uploads() {
           {!loading && requests.length === 0 && (
             <div className="empty-state">
               <p>No upload requests yet</p>
-              <Link to="/dashboard">
+              <Link to="/create-reel">
                 <button>Create Your First Post</button>
               </Link>
             </div>

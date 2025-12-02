@@ -1,12 +1,11 @@
 /**
- * Dashboard Page
+ * CreateReel Page
  * Main posting interface for creating and publishing reels across platforms
  */
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '../components/DashboardLayout'
 import apiClient from '../lib/apiClient'
-import '../styles/dashboard.css'
 
 interface ConnectedAccount {
   account_id: string
@@ -16,7 +15,7 @@ interface ConnectedAccount {
   account_type?: string
 }
 
-export function Dashboard() {
+export function CreateReel() {
   const navigate = useNavigate()
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([])
   const [loading, setLoading] = useState(true)
@@ -386,7 +385,7 @@ export function Dashboard() {
 
                 return (
                   <div key={account.account_id}>
-                    <label className="account-checkbox" style={isTikTok ? { flexDirection: 'column', alignItems: 'stretch' } : {}}>
+                    <label className="account-checkbox" style={isTikTok ? { flexDirection: 'column', alignItems: 'stretch', background: 'transparent', border: '2px solid var(--gray-200)' } : {}}>
                       {isTikTok ? (
                         <>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>

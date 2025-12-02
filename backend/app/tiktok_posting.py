@@ -26,7 +26,8 @@ class TikTokPostingService:
         open_id: str,
         access_token: str,
         video_url: str,
-        caption: str
+        caption: str,
+        settings: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
         Post a video to TikTok using Content Posting API
@@ -36,6 +37,7 @@ class TikTokPostingService:
             access_token: TikTok access token
             video_url: Public URL to the video file
             caption: Post caption/text (max 2200 characters)
+            settings: Optional dict with TikTok-specific settings (privacy, duet, comments, etc.)
 
         Returns:
             Dict containing publish_id and status
@@ -54,7 +56,7 @@ class TikTokPostingService:
             # Step 2: Initialize video upload with size info
             logger.info("Step 2: Initializing video upload with TikTok")
             init_response = TikTokPostingService._initialize_upload(
-                open_id, access_token, video_size, caption
+                open_id, access_token, video_size, caption, settings
             )
 
             logger.info(f"Init response: {init_response}")
@@ -104,7 +106,8 @@ class TikTokPostingService:
         open_id: str,
         access_token: str,
         video_size: int,
-        caption: str
+        caption: str,
+        settings: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
         Initialize video upload and get upload URL
@@ -114,6 +117,7 @@ class TikTokPostingService:
             access_token: Access token
             video_size: Size of video in bytes
             caption: Video caption/title
+            settings: Optional dict with TikTok-specific settings
 
         Returns upload_url and publish_id
         """
@@ -124,16 +128,33 @@ class TikTokPostingService:
             "Content-Type": "application/json; charset=UTF-8"
         }
 
+        # Extract settings or use defaults
+        if settings is None:
+            settings = {}
+
+        privacy_level = settings.get('privacy_level', 'PUBLIC_TO_EVERYONE')
+        disable_comment = settings.get('disable_comment', False)
+        disable_duet = settings.get('disable_duet', False)
+        disable_stitch = settings.get('disable_stitch', False)
+
+        # Build post_info
+        post_info = {
+            "title": caption[:150] if caption else "Video",  # Title max 150 chars for TikTok
+            "privacy_level": privacy_level,
+            "disable_duet": disable_duet,
+            "disable_comment": disable_comment,
+            "disable_stitch": disable_stitch,
+            "video_cover_timestamp_ms": 1000
+        }
+
+        # Add branded content disclosure if specified
+        if settings.get('commercial_content') and settings.get('commercial_type'):
+            post_info["brand_content_toggle"] = True
+            post_info["brand_organic_toggle"] = (settings.get('commercial_type') == 'organic_branded_content')
+
         # Use FILE_UPLOAD to avoid URL validation requirements
         payload = {
-            "post_info": {
-                "title": caption[:150] if caption else "Video",  # Title max 150 chars for TikTok
-                "privacy_level": "PUBLIC_TO_EVERYONE",  # Production setting - posts are public (requires approved TikTok app)
-                "disable_duet": False,
-                "disable_comment": False,
-                "disable_stitch": False,
-                "video_cover_timestamp_ms": 1000
-            },
+            "post_info": post_info,
             "source_info": {
                 "source": "FILE_UPLOAD",  # Use file upload instead of PULL_FROM_URL
                 "video_size": video_size,

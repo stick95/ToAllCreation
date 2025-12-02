@@ -844,6 +844,7 @@ if AUTH_ENABLED:
             s3_key = request.get('s3_key')
             caption = request.get('caption', '')
             account_ids = request.get('account_ids', [])
+            tiktok_settings = request.get('tiktok_settings')
 
             if not s3_key:
                 raise HTTPException(status_code=400, detail="s3_key is required")
@@ -875,7 +876,8 @@ if AUTH_ENABLED:
                 user_id=user_id,
                 video_url=video_url,
                 caption=caption,
-                destinations=destinations
+                destinations=destinations,
+                tiktok_settings=tiktok_settings
             )
 
             logger.info(f"Upload request created: {upload_request['request_id']}")

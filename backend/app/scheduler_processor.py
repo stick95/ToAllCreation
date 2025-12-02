@@ -59,7 +59,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     user_id=user_id,
                     video_url=post['video_url'],
                     caption=post['caption'],
-                    destinations=post['destinations']
+                    destinations=post['destinations'],
+                    tiktok_settings=post.get('tiktok_settings')
                 )
 
                 request_id = upload_request['request_id']

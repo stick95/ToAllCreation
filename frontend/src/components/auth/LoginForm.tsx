@@ -20,7 +20,7 @@ export function LoginForm() {
 
     try {
       await signIn(email, password)
-      navigate('/dashboard') // Redirect after successful login
+      navigate('/create-reel') // Redirect after successful login
     } catch (error) {
       // Error is handled by store
       console.error('Login failed:', error)

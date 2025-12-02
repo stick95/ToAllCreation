@@ -29,7 +29,8 @@ def create_upload_request(
     user_id: str,
     video_url: str,
     caption: str,
-    destinations: List[str]
+    destinations: List[str],
+    tiktok_settings: Dict[str, Any] = None
 ) -> Dict[str, Any]:
     """
     Create a new upload request and queue posting jobs
@@ -39,6 +40,7 @@ def create_upload_request(
         video_url: S3 URL of the video
         caption: Post caption
         destinations: List of destination identifiers (e.g., ["instagram:account_id", "facebook:page_id"])
+        tiktok_settings: Optional TikTok-specific settings (privacy, duet, comments, etc.)
 
     Returns:
         Upload request details including request_id
@@ -83,6 +85,10 @@ def create_upload_request(
             'video_url': video_url,
             'caption': caption
         }
+
+        # Add TikTok settings if provided and destination is TikTok
+        if tiktok_settings and dest.startswith('tiktok:'):
+            message['tiktok_settings'] = tiktok_settings
 
         # Send message to SQS
         message_params = {

@@ -659,6 +659,7 @@ def process_tiktok_post(
     account_id: str,
     video_url: str,
     caption: str,
+    settings: Dict[str, Any],
     detailed_log: 'DetailedLogger'
 ):
     """
@@ -670,6 +671,7 @@ def process_tiktok_post(
         account_id: Account ID (format: "tiktok:open_id")
         video_url: S3 URL to video
         caption: Video caption/text
+        settings: Optional TikTok-specific settings (privacy, duet, comments, etc.)
         detailed_log: Detailed logger instance
     """
     try:
@@ -737,11 +739,14 @@ def process_tiktok_post(
 
         # Post video to TikTok
         detailed_log.log('INFO', 'Calling TikTok API...')
+        if settings:
+            detailed_log.log('INFO', f'Using TikTok settings: {json.dumps(settings)}')
         result = TikTokPostingService.post_video(
             open_id=open_id,
             access_token=access_token,
             video_url=video_url,
-            caption=caption
+            caption=caption,
+            settings=settings
         )
 
         detailed_log.log('INFO', f'TikTok API returned: {json.dumps(result)}')
@@ -776,6 +781,7 @@ def handler(event, context):
             destination = message['destination']  # e.g., "instagram:account_id" or "facebook:page_id"
             video_url = message['video_url']
             caption = message.get('caption', '')
+            tiktok_settings = message.get('tiktok_settings')
 
             logger.info(f"Processing request {request_id} for destination {destination}")
 
@@ -817,7 +823,7 @@ def handler(event, context):
                 )
             elif platform == 'tiktok':
                 result = process_tiktok_post(
-                    request_id, user_id, destination, video_url, caption, detailed_log
+                    request_id, user_id, destination, video_url, caption, tiktok_settings, detailed_log
                 )
             else:
                 raise Exception(f"Unknown platform: {platform}")
