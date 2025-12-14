@@ -422,6 +422,67 @@
   border: 1px solid #cfc;
 }
 
+/* Auth Form Card - for login/register pages using dashboard layout */
+.auth-form-card {
+  background-color: var(--white);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-lg);
+  max-width: 450px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.auth-form-card .form-group {
+  text-align: left;
+}
+
+.auth-form-card .form-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+  color: var(--dark-text);
+}
+
+.auth-form-card .form-group input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+}
+
+.auth-form-card .form-actions {
+  text-align: right;
+  margin-bottom: var(--spacing-md);
+}
+
+.auth-form-card .link-secondary {
+  color: var(--primary-blue);
+  font-size: 0.875rem;
+}
+
+.auth-form-card .btn-primary {
+  width: 100%;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.auth-form-card .form-footer {
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
+.auth-form-card .form-footer a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-form-card .form-footer a:hover {
+  text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .dashboard-container {

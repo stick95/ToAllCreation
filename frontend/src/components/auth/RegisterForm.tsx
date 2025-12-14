@@ -82,32 +82,197 @@ export function RegisterForm() {
 
   if (showVerification) {
     return (
-      <div className="auth-form-container">
-        <div className="auth-form">
-          <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
-          <h2>Verify Email</h2>
-          <p className="subtitle">
+      <div className="dashboard-container">
+        <header className="dashboard-header">
+          <div className="header-top">
+            <img src={logo} alt="ToAllCreation Logo" className="dashboard-logo" />
+            <div className="menu-container">
+              <button
+                className="hamburger-btn"
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="Menu"
+              >
+                <span className="hamburger-line"></span>
+                <span className="hamburger-line"></span>
+                <span className="hamburger-line"></span>
+              </button>
+              {menuOpen && (
+                <div className="dropdown-menu">
+                  <Link to="/home" className="menu-item">
+                    Home
+                  </Link>
+                  <Link to="/login" className="menu-item">
+                    Sign In
+                  </Link>
+                  <Link to="/register" className="menu-item">
+                    Sign Up
+                  </Link>
+                  <div className="menu-divider"></div>
+                  <Link to="/privacy" className="menu-item menu-item-secondary">
+                    Privacy
+                  </Link>
+                  <Link to="/terms" className="menu-item menu-item-secondary">
+                    Terms
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+          <h1>Verify Email</h1>
+          <p className="dashboard-subtitle">
             We sent a verification code to <strong>{email}</strong>
           </p>
+        </header>
 
+        <div className="dashboard-content">
+          <div className="auth-form-card">
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleVerification}>
+              <div className="form-group">
+                <label htmlFor="code">Verification Code</label>
+                <input
+                  id="code"
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  required
+                  disabled={isLoading}
+                  maxLength={6}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Verifying...' : 'Verify Email'}
+              </button>
+            </form>
+
+            <div className="form-footer">
+              <p>
+                Didn't receive code?{' '}
+                <button
+                  className="link-button"
+                  onClick={() => handleSubmit(new Event('submit') as any)}
+                >
+                  Resend
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dashboard-container">
+      <header className="dashboard-header">
+        <div className="header-top">
+          <img src={logo} alt="ToAllCreation Logo" className="dashboard-logo" />
+          <div className="menu-container">
+            <button
+              className="hamburger-btn"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Menu"
+            >
+              <span className="hamburger-line"></span>
+              <span className="hamburger-line"></span>
+              <span className="hamburger-line"></span>
+            </button>
+            {menuOpen && (
+              <div className="dropdown-menu">
+                <Link to="/home" className="menu-item">
+                  Home
+                </Link>
+                <Link to="/login" className="menu-item">
+                  Sign In
+                </Link>
+                <Link to="/register" className="menu-item">
+                  Sign Up
+                </Link>
+                <div className="menu-divider"></div>
+                <Link to="/privacy" className="menu-item menu-item-secondary">
+                  Privacy
+                </Link>
+                <Link to="/terms" className="menu-item menu-item-secondary">
+                  Terms
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+        <h1>Create Account</h1>
+        <p className="dashboard-subtitle">Join ToAllCreation to start sharing</p>
+      </header>
+
+      <div className="dashboard-content">
+        <div className="auth-form-card">
           {error && (
             <div className="error-message">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleVerification}>
+          {passwordError && (
+            <div className="error-message">
+              {passwordError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="code">Verification Code</label>
+              <label htmlFor="email">Email</label>
               <input
-                id="code"
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                placeholder="Enter 6-digit code"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
                 required
                 disabled={isLoading}
-                maxLength={6}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (e.target.value) validatePassword(e.target.value)
+                }}
+                placeholder="Create a strong password"
+                required
+                disabled={isLoading}
+                minLength={8}
+              />
+              <small className="form-hint">
+                Must be 8+ characters with uppercase, lowercase, number, and special character
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                required
+                disabled={isLoading}
+                minLength={8}
               />
             </div>
 
@@ -116,140 +281,16 @@ export function RegisterForm() {
               className="btn-primary"
               disabled={isLoading}
             >
-              {isLoading ? 'Verifying...' : 'Verify Email'}
+              {isLoading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
           <div className="form-footer">
             <p>
-              Didn't receive code?{' '}
-              <button
-                className="link-button"
-                onClick={() => handleSubmit(new Event('submit') as any)}
-              >
-                Resend
-              </button>
+              Already have an account?{' '}
+              <Link to="/login">Sign in</Link>
             </p>
           </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="auth-form-container">
-      <div className="auth-header">
-        <div className="menu-container">
-          <button
-            className="hamburger-btn"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Menu"
-          >
-            <span className="hamburger-line"></span>
-            <span className="hamburger-line"></span>
-            <span className="hamburger-line"></span>
-          </button>
-          {menuOpen && (
-            <div className="dropdown-menu">
-              <Link to="/" className="menu-item">
-                Home
-              </Link>
-              <Link to="/login" className="menu-item">
-                Sign In
-              </Link>
-              <Link to="/register" className="menu-item">
-                Sign Up
-              </Link>
-              <div className="menu-divider"></div>
-              <Link to="/privacy" className="menu-item menu-item-secondary">
-                Privacy
-              </Link>
-              <Link to="/terms" className="menu-item menu-item-secondary">
-                Terms
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="auth-form">
-        <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
-        <h2>Create Account</h2>
-        <p className="subtitle">Join ToAllCreation to start sharing</p>
-
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
-
-        {passwordError && (
-          <div className="error-message">
-            {passwordError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                if (e.target.value) validatePassword(e.target.value)
-              }}
-              placeholder="Create a strong password"
-              required
-              disabled={isLoading}
-              minLength={8}
-            />
-            <small className="form-hint">
-              Must be 8+ characters with uppercase, lowercase, number, and special character
-            </small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password"
-              required
-              disabled={isLoading}
-              minLength={8}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Creating account...' : 'Create Account'}
-          </button>
-        </form>
-
-        <div className="form-footer">
-          <p>
-            Already have an account?{' '}
-            <Link to="/login">Sign in</Link>
-          </p>
         </div>
       </div>
     </div>

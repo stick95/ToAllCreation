@@ -35,7 +35,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
             </button>
             {menuOpen && (
               <div className="dropdown-menu">
-                <Link to="/" className="menu-item">
+                <Link to="/home" className="menu-item">
                   Home
                 </Link>
                 <Link to="/create-reel" className="menu-item">
