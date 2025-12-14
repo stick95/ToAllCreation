@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react'
 import { useAuthStore } from '../../stores/authStore'
 import { Link } from 'react-router-dom'
 import logo from '../../assets/img/taclogo.png'
+import '../../styles/dashboard.css'
 
 export function RegisterForm() {
   const [email, setEmail] = useState('')
@@ -13,6 +14,7 @@ export function RegisterForm() {
   const [showVerification, setShowVerification] = useState(false)
   const [verificationCode, setVerificationCode] = useState('')
   const [passwordError, setPasswordError] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const { signUp, confirmSignUp, isLoading, error, clearError } = useAuthStore()
 
@@ -136,6 +138,39 @@ export function RegisterForm() {
 
   return (
     <div className="auth-form-container">
+      <div className="auth-header">
+        <div className="menu-container">
+          <button
+            className="hamburger-btn"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menu"
+          >
+            <span className="hamburger-line"></span>
+            <span className="hamburger-line"></span>
+            <span className="hamburger-line"></span>
+          </button>
+          {menuOpen && (
+            <div className="dropdown-menu">
+              <Link to="/" className="menu-item">
+                Home
+              </Link>
+              <Link to="/login" className="menu-item">
+                Sign In
+              </Link>
+              <Link to="/register" className="menu-item">
+                Sign Up
+              </Link>
+              <div className="menu-divider"></div>
+              <Link to="/privacy" className="menu-item menu-item-secondary">
+                Privacy
+              </Link>
+              <Link to="/terms" className="menu-item menu-item-secondary">
+                Terms
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
       <div className="auth-form">
         <img src={logo} alt="ToAllCreation Logo" className="auth-logo" />
         <h2>Create Account</h2>

@@ -31,10 +31,20 @@
 .auth-form-container {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2rem;
   background-color: var(--light-bg);
+  position: relative;
+}
+
+/* Auth header with menu */
+.auth-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 1rem;
 }
 
 .auth-form {
